@@ -2197,3 +2197,463 @@ class ExportAgedBalanceView(LoginRequiredMixin, View):
             writer.writerow([c.name, c.balance])
         
         return response
+
+
+# ============================================================
+# VENTES EXPRESS (Phase 10)
+# ============================================================
+
+class SaleListView(LoginRequiredMixin, ListView):
+    """Liste des ventes express"""
+    template_name = 'crm/sale_list.html'
+    context_object_name = 'sales'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        from .models import Invoice, InvoiceStatus
+        # Les ventes express sont les factures directes (sans commande préalable)
+        qs = Invoice.objects.filter(
+            order__isnull=True
+        ).select_related('customer').order_by('-date')
+        
+        # Filtres
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        
+        customer = self.request.GET.get('customer')
+        if customer:
+            qs = qs.filter(customer_id=customer)
+        
+        date_from = self.request.GET.get('date_from')
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        
+        date_to = self.request.GET.get('date_to')
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+        
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        from .models import InvoiceStatus
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Ventes Express'
+        context['status_choices'] = InvoiceStatus.choices
+        context['customers'] = Customer.objects.filter(is_active=True).order_by('name')
+        
+        # Stats du jour
+        today = timezone.now().date()
+        today_sales = self.get_queryset().filter(date=today)
+        context['today_count'] = today_sales.count()
+        context['today_total'] = today_sales.aggregate(total=Sum('total_ttc'))['total'] or 0
+        
+        return context
+
+
+class SaleCreateView(LoginRequiredMixin, View):
+    """Création d'une vente express - Interface dynamique"""
+    template_name = 'crm/sale_form.html'
+    
+    def get(self, request):
+        from .models import CashRegister, CashRegisterStatus
+        
+        context = {
+            'page_title': 'Nouvelle Vente Express',
+            'customers': Customer.objects.filter(is_active=True, is_blocked=False).order_by('name'),
+            'products': Product.objects.filter(is_active=True, stock_quantity__gt=0).select_related('category').order_by('name'),
+        }
+        
+        # Vérifier si la caisse est ouverte
+        open_register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+        context['cash_register_open'] = open_register is not None
+        
+        return render(request, self.template_name, context)
+    
+    def post(self, request):
+        from .models import (
+            Invoice, InvoiceItem, InvoiceStatus, Payment, PaymentMethod, 
+            PaymentType, PaymentStatus, CashRegister, CashRegisterStatus,
+            CashMovement, StockMovement, StockMovementType, CustomerLedger, AuditLog, AuditAction
+        )
+        import json
+        
+        try:
+            # Récupérer les données
+            customer_id = request.POST.get('customer_id')
+            items_json = request.POST.get('items', '[]')
+            payment_method = request.POST.get('payment_method', PaymentMethod.CASH)
+            payment_reference = request.POST.get('payment_reference', '')
+            notes = request.POST.get('notes', '')
+            
+            items = json.loads(items_json)
+            
+            if not items:
+                messages.error(request, "Veuillez ajouter au moins un article.")
+                return redirect('crm:sale_create')
+            
+            # Client (optionnel pour vente comptoir)
+            customer = None
+            if customer_id:
+                customer = get_object_or_404(Customer, pk=customer_id)
+            
+            # Créer la facture
+            invoice = Invoice.objects.create(
+                customer=customer,
+                status=InvoiceStatus.PAID,
+                date=timezone.now().date(),
+                due_date=timezone.now().date(),
+                notes=notes,
+                created_by=request.user
+            )
+            
+            total_ht = Decimal('0')
+            
+            # Créer les lignes de facture et déduire le stock
+            for item in items:
+                product = get_object_or_404(Product, pk=item['product_id'])
+                quantity = Decimal(str(item['quantity']))
+                unit_price = Decimal(str(item['unit_price']))
+                
+                # Vérifier le stock
+                if product.stock_quantity < quantity:
+                    invoice.delete()
+                    messages.error(request, f"Stock insuffisant pour {product.name}")
+                    return redirect('crm:sale_create')
+                
+                line_total = quantity * unit_price
+                total_ht += line_total
+                
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    product=product,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    total=line_total
+                )
+                
+                # Mouvement de stock (sortie)
+                StockMovement.objects.create(
+                    product=product,
+                    movement_type=StockMovementType.SALE,
+                    quantity=-quantity,
+                    reference=f"VENTE-{invoice.invoice_number}",
+                    notes=f"Vente express #{invoice.invoice_number}",
+                    created_by=request.user
+                )
+                
+                # Mettre à jour le stock
+                product.stock_quantity -= quantity
+                product.save()
+            
+            # Mettre à jour les totaux
+            invoice.total_ht = total_ht
+            invoice.total_ttc = total_ht  # Pas de TVA pour l'instant
+            invoice.amount_paid = total_ht
+            invoice.save()
+            
+            # Créer le paiement
+            payment = Payment.objects.create(
+                invoice=invoice,
+                customer=customer,
+                amount=total_ht,
+                payment_method=payment_method,
+                payment_type=PaymentType.PAYMENT,
+                reference=payment_reference or f"VENTE-{invoice.invoice_number}",
+                status=PaymentStatus.COMPLETED,
+                notes=f"Paiement vente express #{invoice.invoice_number}",
+                created_by=request.user
+            )
+            
+            # Enregistrer en caisse si paiement espèces
+            if payment_method == PaymentMethod.CASH:
+                open_register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+                if open_register:
+                    CashMovement.objects.create(
+                        register=open_register,
+                        payment=payment,
+                        amount=total_ht,
+                        description=f"Vente express #{invoice.invoice_number}",
+                        created_by=request.user
+                    )
+                    open_register.current_balance += total_ht
+                    open_register.save()
+            
+            # Audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action=AuditAction.CREATE,
+                model_name='Invoice',
+                object_id=invoice.id,
+                object_repr=str(invoice),
+                changes={'type': 'Vente express', 'total': str(total_ht)}
+            )
+            
+            messages.success(request, f"Vente #{invoice.invoice_number} créée avec succès! Total: {total_ht:,.0f} FCFA")
+            return redirect('crm:sale_detail', pk=invoice.pk)
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la création de la vente: {str(e)}")
+            return redirect('crm:sale_create')
+
+
+class SaleDetailView(LoginRequiredMixin, DetailView):
+    """Détail d'une vente express"""
+    template_name = 'crm/sale_detail.html'
+    context_object_name = 'sale'
+    
+    def get_queryset(self):
+        from .models import Invoice
+        return Invoice.objects.filter(order__isnull=True).select_related('customer', 'created_by')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = f'Vente #{self.object.invoice_number}'
+        context['items'] = self.object.items.select_related('product')
+        context['payments'] = self.object.payments.all()
+        return context
+
+
+class SalePDFView(LoginRequiredMixin, View):
+    """Génération PDF d'une vente express"""
+    
+    def get(self, request, pk):
+        from .models import Invoice
+        from django.http import HttpResponse
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm, mm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+        from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+        import io
+        import os
+        
+        invoice = get_object_or_404(Invoice, pk=pk, order__isnull=True)
+        
+        # Créer le buffer
+        buffer = io.BytesIO()
+        
+        # Créer le document
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=1.5*cm,
+            leftMargin=1.5*cm,
+            topMargin=1.5*cm,
+            bottomMargin=1.5*cm
+        )
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle(
+            'Title',
+            parent=styles['Heading1'],
+            fontSize=20,
+            alignment=TA_CENTER,
+            spaceAfter=20,
+            textColor=colors.HexColor('#1e3a5f')
+        )
+        
+        header_style = ParagraphStyle(
+            'Header',
+            parent=styles['Normal'],
+            fontSize=10,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor('#666666')
+        )
+        
+        normal_style = ParagraphStyle(
+            'NormalCustom',
+            parent=styles['Normal'],
+            fontSize=10,
+            leading=14
+        )
+        
+        bold_style = ParagraphStyle(
+            'Bold',
+            parent=styles['Normal'],
+            fontSize=10,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Contenu
+        elements = []
+        
+        # Logo et en-tête
+        elements.append(Paragraph("SERVIAC GROUP SUARL", title_style))
+        elements.append(Paragraph("Farine de Poisson Premium - Nutrition Animale", header_style))
+        elements.append(Paragraph("N'Dotré, près de Hotel Dandy, Abidjan - Côte d'Ivoire", header_style))
+        elements.append(Paragraph("Tél: +225 07 79 05 71 01 / WhatsApp: +225 07 01 80 80 49", header_style))
+        elements.append(Paragraph("Email: info@serviac-group.com", header_style))
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Ligne de séparation
+        elements.append(Table([['']], colWidths=[18*cm], style=[
+            ('LINEBELOW', (0,0), (-1,-1), 2, colors.HexColor('#d4a84b'))
+        ]))
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Type de document
+        elements.append(Paragraph(f"<b>FACTURE N° {invoice.invoice_number}</b>", ParagraphStyle(
+            'DocTitle', parent=styles['Heading2'], fontSize=16, alignment=TA_CENTER,
+            textColor=colors.HexColor('#1e3a5f')
+        )))
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Informations facture et client
+        info_data = [
+            [Paragraph(f"<b>Date:</b> {invoice.date.strftime('%d/%m/%Y')}", normal_style),
+             Paragraph(f"<b>Client:</b> {invoice.customer.name if invoice.customer else 'Vente Comptoir'}", normal_style)],
+            [Paragraph(f"<b>Échéance:</b> {invoice.due_date.strftime('%d/%m/%Y')}", normal_style),
+             Paragraph(f"<b>Tél:</b> {invoice.customer.phone if invoice.customer else '-'}", normal_style)],
+        ]
+        
+        if invoice.customer and invoice.customer.address:
+            info_data.append([
+                Paragraph("", normal_style),
+                Paragraph(f"<b>Adresse:</b> {invoice.customer.address}", normal_style)
+            ])
+        
+        info_table = Table(info_data, colWidths=[9*cm, 9*cm])
+        info_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Tableau des articles
+        items = invoice.items.select_related('product').all()
+        
+        table_data = [
+            [Paragraph('<b>Réf.</b>', bold_style),
+             Paragraph('<b>Désignation</b>', bold_style),
+             Paragraph('<b>Qté</b>', bold_style),
+             Paragraph('<b>P.U. (FCFA)</b>', bold_style),
+             Paragraph('<b>Total (FCFA)</b>', bold_style)]
+        ]
+        
+        for item in items:
+            table_data.append([
+                Paragraph(item.product.code if item.product else '-', normal_style),
+                Paragraph(item.description or (item.product.name if item.product else '-'), normal_style),
+                Paragraph(f"{item.quantity:,.0f}", normal_style),
+                Paragraph(f"{item.unit_price:,.0f}", normal_style),
+                Paragraph(f"{item.total:,.0f}", normal_style)
+            ])
+        
+        item_table = Table(table_data, colWidths=[2.5*cm, 8*cm, 2*cm, 2.75*cm, 2.75*cm])
+        item_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e3a5f')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('ALIGN', (2,0), (-1,-1), 'RIGHT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('BOTTOMPADDING', (0,0), (-1,0), 10),
+            ('TOPPADDING', (0,0), (-1,0), 10),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f8f9fa')]),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        elements.append(item_table)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Totaux
+        totals_data = [
+            ['', '', '', Paragraph('<b>Total HT:</b>', bold_style), Paragraph(f"<b>{invoice.total_ht:,.0f} FCFA</b>", bold_style)],
+            ['', '', '', Paragraph('<b>TVA:</b>', bold_style), Paragraph(f"<b>{invoice.tax_amount:,.0f} FCFA</b>", bold_style)],
+            ['', '', '', Paragraph('<b>TOTAL TTC:</b>', ParagraphStyle('TotalBold', parent=bold_style, fontSize=12, textColor=colors.HexColor('#1e3a5f'))), 
+             Paragraph(f"<b>{invoice.total_ttc:,.0f} FCFA</b>", ParagraphStyle('TotalBold', parent=bold_style, fontSize=12, textColor=colors.HexColor('#1e3a5f')))],
+        ]
+        
+        totals_table = Table(totals_data, colWidths=[2.5*cm, 8*cm, 2*cm, 2.75*cm, 2.75*cm])
+        totals_table.setStyle(TableStyle([
+            ('ALIGN', (3,0), (-1,-1), 'RIGHT'),
+            ('LINEABOVE', (3,2), (-1,2), 2, colors.HexColor('#d4a84b')),
+            ('TOPPADDING', (0,2), (-1,2), 8),
+        ]))
+        elements.append(totals_table)
+        elements.append(Spacer(1, 1*cm))
+        
+        # Statut paiement
+        if invoice.amount_paid >= invoice.total_ttc:
+            status_text = "✓ PAYÉE"
+            status_color = colors.HexColor('#28a745')
+        else:
+            status_text = f"Reste à payer: {(invoice.total_ttc - invoice.amount_paid):,.0f} FCFA"
+            status_color = colors.HexColor('#dc3545')
+        
+        elements.append(Paragraph(f"<b>{status_text}</b>", ParagraphStyle(
+            'Status', parent=styles['Normal'], fontSize=14, alignment=TA_CENTER, textColor=status_color
+        )))
+        elements.append(Spacer(1, 1*cm))
+        
+        # Notes
+        if invoice.notes:
+            elements.append(Paragraph(f"<b>Notes:</b> {invoice.notes}", normal_style))
+            elements.append(Spacer(1, 0.5*cm))
+        
+        # Pied de page
+        elements.append(Table([['']], colWidths=[18*cm], style=[
+            ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor('#cccccc'))
+        ]))
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph("Merci pour votre confiance! - SERVIAC GROUP", ParagraphStyle(
+            'Footer', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER, textColor=colors.HexColor('#666666')
+        )))
+        
+        # Générer le PDF
+        doc.build(elements)
+        
+        # Retourner la réponse
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="facture_{invoice.invoice_number}.pdf"'
+        
+        return response
+
+
+class SaleQuickSearchView(LoginRequiredMixin, View):
+    """Recherche rapide de produits/clients pour vente express (AJAX)"""
+    
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+        search_type = request.GET.get('type', 'product')
+        
+        if len(query) < 2:
+            return JsonResponse({'results': []})
+        
+        if search_type == 'product':
+            products = Product.objects.filter(
+                Q(name__icontains=query) | Q(code__icontains=query),
+                is_active=True,
+                stock_quantity__gt=0
+            )[:10]
+            
+            results = [{
+                'id': p.id,
+                'code': p.code,
+                'name': p.name,
+                'price_b2b': float(p.price_b2b),
+                'price_b2c': float(p.price_b2c),
+                'stock': float(p.stock_quantity),
+                'unit': p.get_unit_display()
+            } for p in products]
+        else:
+            customers = Customer.objects.filter(
+                Q(name__icontains=query) | Q(phone__icontains=query),
+                is_active=True,
+                is_blocked=False
+            )[:10]
+            
+            results = [{
+                'id': c.id,
+                'name': c.name,
+                'phone': c.phone,
+                'type': c.customer_type,
+                'balance': float(c.balance)
+            } for c in customers]
+        
+        return JsonResponse({'results': results})

@@ -128,4 +128,11 @@ urlpatterns = [
     path('exports/factures/', views.ExportInvoicesView.as_view(), name='export_invoices'),
     path('exports/stock/', views.ExportStockView.as_view(), name='export_stock'),
     path('exports/balance-agee/', views.ExportAgedBalanceView.as_view(), name='export_aged_balance'),
+    
+    # Ventes Express (Phase 10)
+    path('ventes/', views.SaleListView.as_view(), name='sale_list'),
+    path('ventes/nouvelle/', views.SaleCreateView.as_view(), name='sale_create'),
+    path('ventes/<int:pk>/', views.SaleDetailView.as_view(), name='sale_detail'),
+    path('ventes/<int:pk>/pdf/', views.SalePDFView.as_view(), name='sale_pdf'),
+    path('ventes/recherche/', views.SaleQuickSearchView.as_view(), name='sale_search'),
 ]

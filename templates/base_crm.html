@@ -161,6 +161,11 @@
                 <span class="nav-link text-white-50 small text-uppercase">Commercial</span>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if 'ventes' in request.path and 'livraisons' not in request.path %}active{% endif %}" href="{% url 'crm:sale_list' %}">
+                    <i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Ventes Express
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if 'commandes' in request.path %}active{% endif %}" href="{% url 'crm:order_list' %}">
                     <i class="bi bi-cart me-2"></i>Commandes
                 </a>

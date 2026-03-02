@@ -1,0 +1,251 @@
+{% extends 'base_crm.html' %}
+{% load static %}
+
+{% block title %}Vente #{{ sale.invoice_number }} - SERVIAC CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'crm:sale_list' %}">Ventes Express</a></li>
+                    <li class="breadcrumb-item active">{{ sale.invoice_number }}</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-receipt-cutoff text-success me-2"></i>Vente #{{ sale.invoice_number }}
+            </h1>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'crm:sale_pdf' sale.pk %}" class="btn btn-danger" target="_blank">
+                <i class="bi bi-file-pdf me-2"></i>Télécharger PDF
+            </a>
+            <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                <i class="bi bi-printer me-2"></i>Imprimer
+            </button>
+            <a href="{% url 'crm:sale_create' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle me-2"></i>Nouvelle Vente
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <!-- Détails vente -->
+            <div class="card mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Détails de la vente</h5>
+                    {% if sale.status == 'paid' %}
+                        <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>PAYÉE</span>
+                    {% elif sale.status == 'partial' %}
+                        <span class="badge bg-warning fs-6"><i class="bi bi-exclamation-circle me-1"></i>PARTIELLE</span>
+                    {% else %}
+                        <span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>IMPAYÉE</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <table class="table table-borderless mb-0">
+                                <tr>
+                                    <td class="text-muted" width="40%">N° Facture</td>
+                                    <td class="fw-bold">{{ sale.invoice_number }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Date</td>
+                                    <td>{{ sale.date|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Échéance</td>
+                                    <td>{{ sale.due_date|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Créé par</td>
+                                    <td>{{ sale.created_by.get_full_name|default:sale.created_by.username }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded" style="background: var(--bs-light);">
+                                <h6 class="text-muted mb-3">Client</h6>
+                                {% if sale.customer %}
+                                    <h5 class="mb-2">
+                                        <a href="{% url 'crm:customer_detail' sale.customer.pk %}">
+                                            {{ sale.customer.name }}
+                                        </a>
+                                    </h5>
+                                    <p class="mb-1">
+                                        <i class="bi bi-telephone me-2"></i>{{ sale.customer.phone }}
+                                    </p>
+                                    {% if sale.customer.email %}
+                                    <p class="mb-1">
+                                        <i class="bi bi-envelope me-2"></i>{{ sale.customer.email }}
+                                    </p>
+                                    {% endif %}
+                                    <span class="badge bg-{{ sale.customer.customer_type|lower }}">
+                                        {{ sale.customer.get_customer_type_display }}
+                                    </span>
+                                {% else %}
+                                    <p class="text-muted mb-0">
+                                        <i class="bi bi-shop me-2"></i>Vente Comptoir (Client anonyme)
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Articles -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Articles vendus</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Réf.</th>
+                                    <th>Désignation</th>
+                                    <th class="text-center">Quantité</th>
+                                    <th class="text-end">Prix Unit.</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ item.product.code|default:"-" }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.product %}
+                                            <a href="{% url 'crm:product_detail' item.product.pk %}">
+                                                {{ item.product.name }}
+                                            </a>
+                                        {% else %}
+                                            {{ item.description|default:"-" }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ item.quantity|floatformat:0 }}</td>
+                                    <td class="text-end">{{ item.unit_price|floatformat:0 }} FCFA</td>
+                                    <td class="text-end fw-bold">{{ item.total|floatformat:0 }} FCFA</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">Total HT</td>
+                                    <td class="text-end fw-bold">{{ sale.total_ht|floatformat:0 }} FCFA</td>
+                                </tr>
+                                {% if sale.tax_amount > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end">TVA</td>
+                                    <td class="text-end">{{ sale.tax_amount|floatformat:0 }} FCFA</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="table-success">
+                                    <td colspan="4" class="text-end fw-bold fs-5">TOTAL TTC</td>
+                                    <td class="text-end fw-bold fs-5">{{ sale.total_ttc|floatformat:0 }} FCFA</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if sale.notes %}
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-sticky me-2"></i>Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ sale.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Colonne droite: Paiements -->
+        <div class="col-lg-4">
+            <!-- Résumé paiement -->
+            <div class="card mb-4" style="background: linear-gradient(135deg, #1e3a5f, #2c5282);">
+                <div class="card-body text-white">
+                    <h5 class="text-white-50 mb-3">Résumé Paiement</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total facture</span>
+                        <span class="fw-bold">{{ sale.total_ttc|floatformat:0 }} FCFA</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Montant payé</span>
+                        <span class="text-success fw-bold">{{ sale.amount_paid|floatformat:0 }} FCFA</span>
+                    </div>
+                    <hr class="bg-white opacity-25">
+                    <div class="d-flex justify-content-between">
+                        <span class="fs-5">Reste à payer</span>
+                        {% with reste=sale.total_ttc|add:sale.amount_paid|add:"-"|add:sale.amount_paid %}
+                        <span class="fs-4 fw-bold {% if sale.amount_paid >= sale.total_ttc %}text-success{% else %}text-warning{% endif %}">
+                            {% if sale.amount_paid >= sale.total_ttc %}
+                                0 FCFA
+                            {% else %}
+                                {{ sale.remaining_amount|floatformat:0 }} FCFA
+                            {% endif %}
+                        </span>
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique paiements -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Paiements</h5>
+                </div>
+                <div class="card-body">
+                    {% if payments %}
+                        {% for payment in payments %}
+                        <div class="d-flex justify-content-between align-items-center p-2 rounded mb-2" style="background: #f8f9fa;">
+                            <div>
+                                <span class="fw-bold">{{ payment.amount|floatformat:0 }} FCFA</span>
+                                <br>
+                                <small class="text-muted">
+                                    {{ payment.created_at|date:"d/m/Y H:i" }}
+                                    {% if payment.payment_method == 'cash' %}
+                                        <span class="badge bg-success ms-1">Espèces</span>
+                                    {% elif payment.payment_method == 'mobile_money' %}
+                                        <span class="badge bg-warning ms-1">Mobile</span>
+                                    {% else %}
+                                        <span class="badge bg-primary ms-1">Virement</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center mb-0">Aucun paiement enregistré</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles impression -->
+<style>
+    @media print {
+        .btn, .breadcrumb, nav, .sidebar, header {
+            display: none !important;
+        }
+        .card {
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+{% endblock %}
