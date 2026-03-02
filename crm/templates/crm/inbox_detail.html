@@ -1,0 +1,212 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Commande #{{ order.pk }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'crm:inbox_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+            <i class="bi bi-arrow-left me-1"></i>Retour à l'inbox
+        </a>
+        <h2 class="mb-0">
+            <i class="bi bi-envelope-open me-2"></i>Demande #{{ order.pk }}
+            {% if order.status == 'new' %}
+            <span class="badge bg-primary ms-2">Nouvelle</span>
+            {% elif order.status == 'validated' %}
+            <span class="badge bg-success ms-2">Validée</span>
+            {% elif order.status == 'rejected' %}
+            <span class="badge bg-danger ms-2">Rejetée</span>
+            {% elif order.status == 'converted' %}
+            <span class="badge bg-info ms-2">Convertie</span>
+            {% endif %}
+        </h2>
+    </div>
+    
+    {% if order.status == 'new' %}
+    <div class="btn-group">
+        <form method="post" action="{% url 'crm:inbox_validate' order.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-lg me-1"></i>Valider
+            </button>
+        </form>
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+            <i class="bi bi-x-lg me-1"></i>Rejeter
+        </button>
+    </div>
+    {% elif order.status == 'validated' %}
+    <a href="{% url 'crm:inbox_convert' order.pk %}" class="btn btn-primary">
+        <i class="bi bi-arrow-right-circle me-1"></i>Convertir en commande
+    </a>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <!-- Informations client -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i>Informations Client</h5>
+            </div>
+            <div class="card-body">
+                {% if order.customer %}
+                <div class="mb-3">
+                    <span class="badge bg-success mb-2">Client existant</span>
+                    <h5>{{ order.customer.name }}</h5>
+                    <p class="text-muted mb-1">
+                        <i class="bi bi-telephone me-2"></i>{{ order.customer.phone }}
+                    </p>
+                    {% if order.customer.email %}
+                    <p class="text-muted mb-1">
+                        <i class="bi bi-envelope me-2"></i>{{ order.customer.email }}
+                    </p>
+                    {% endif %}
+                    <a href="{% url 'crm:customer_detail' order.customer.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-eye me-1"></i>Voir fiche client
+                    </a>
+                </div>
+                {% else %}
+                <div class="mb-3">
+                    <span class="badge bg-warning text-dark mb-2">Nouveau prospect</span>
+                    <h5>{{ order.prospect_name }}</h5>
+                    <p class="text-muted mb-1">
+                        <i class="bi bi-telephone me-2"></i>{{ order.prospect_phone }}
+                    </p>
+                    {% if order.prospect_email %}
+                    <p class="text-muted mb-1">
+                        <i class="bi bi-envelope me-2"></i>{{ order.prospect_email }}
+                    </p>
+                    {% endif %}
+                    <p class="mb-1">
+                        <strong>Type:</strong> {{ order.get_prospect_type_display }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if order.prospect_address or order.delivery_address %}
+                <hr>
+                <h6><i class="bi bi-geo-alt me-2"></i>Adresse de livraison</h6>
+                <p class="text-muted">{{ order.delivery_address|default:order.prospect_address }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Détails commande -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Détails Commande</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th class="text-center">Qté</th>
+                                <th class="text-end">Prix unit.</th>
+                                <th class="text-end">Sous-total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items %}
+                            <tr>
+                                <td>
+                                    {% if products and item.product_id in products %}
+                                    {{ products|get_item:item.product_id }}
+                                    {% else %}
+                                    {{ item.product_name|default:"Produit" }}
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">{{ item.unit_price|floatformat:0 }} FCFA</td>
+                                <td class="text-end">{{ item.subtotal|floatformat:0 }} FCFA</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-muted text-center">Aucun article</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <th colspan="3">Total</th>
+                                <th class="text-end">{{ order.total_requested|floatformat:0 }} FCFA</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                {% if order.payment_preference %}
+                <hr>
+                <p><strong>Préférence de paiement:</strong> {{ order.payment_preference }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notes et traçabilité -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informations supplémentaires</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Notes du client</h6>
+                        <p class="text-muted">{{ order.notes|default:"Aucune note" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Traçabilité</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-globe me-2"></i><strong>Source:</strong> {{ order.get_source_display }}</li>
+                            <li><i class="bi bi-calendar me-2"></i><strong>Reçu le:</strong> {{ order.created_at|date:"d/m/Y H:i" }}</li>
+                            {% if order.processed_at %}
+                            <li><i class="bi bi-check-circle me-2"></i><strong>Traité le:</strong> {{ order.processed_at|date:"d/m/Y H:i" }}</li>
+                            {% endif %}
+                            {% if order.processed_by %}
+                            <li><i class="bi bi-person-check me-2"></i><strong>Par:</strong> {{ order.processed_by.username }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                
+                {% if order.rejection_reason %}
+                <div class="alert alert-danger mt-3">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Motif de rejet</h6>
+                    <p class="mb-0">{{ order.rejection_reason }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Rejet -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'crm:inbox_reject' order.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Rejeter la demande</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Motif du rejet *</label>
+                        <textarea name="reason" class="form-control" rows="3" required 
+                                  placeholder="Indiquez la raison du rejet..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">Confirmer le rejet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
