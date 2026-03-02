@@ -115,4 +115,10 @@ urlpatterns = [
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
     path('notifications/marquer-lues/', views.mark_notifications_read, name='mark_notifications_read'),
+    
+    # Phase 8: Optimisation UX
+    path('recherche/', views.GlobalSearchView.as_view(), name='global_search'),
+    path('clients/<int:customer_pk>/commande-rapide/', views.QuickOrderCreateView.as_view(), name='quick_order'),
+    path('factures/<int:invoice_pk>/encaissement-rapide/', views.QuickPaymentView.as_view(), name='quick_payment'),
+    path('clients/<int:pk>/statistiques/', views.CustomerStatsView.as_view(), name='customer_stats'),
 ]

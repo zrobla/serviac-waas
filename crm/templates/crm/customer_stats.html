@@ -1,0 +1,264 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Statistiques - {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'crm:customer_list' %}">Clients</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'crm:customer_detail' customer.pk %}">{{ customer.name }}</a></li>
+                <li class="breadcrumb-item active">Statistiques</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-graph-up-arrow me-2"></i>{{ customer.name }}</h2>
+    </div>
+    <div>
+        <a href="{% url 'crm:customer_detail' customer.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Retour fiche
+        </a>
+        <form action="{% url 'crm:quick_order' customer.pk %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-cart-plus me-1"></i>Nouvelle commande
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs client -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <h6 class="text-white-50">Total Commandes</h6>
+                <h2 class="mb-0">{{ orders_count }}</h2>
+                <small>{{ orders_total|floatformat:0 }} FCFA</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <h6 class="text-white-50">Total Paiements</h6>
+                <h2 class="mb-0">{{ payments_count }}</h2>
+                <small>{{ payments_total|floatformat:0 }} FCFA</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card {% if invoices_unpaid > 0 %}bg-warning text-dark{% else %}bg-light{% endif %} h-100">
+            <div class="card-body">
+                <h6 class="{% if invoices_unpaid > 0 %}opacity-75{% else %}text-muted{% endif %}">Impayés</h6>
+                <h2 class="mb-0">{{ invoices_unpaid|floatformat:0 }}</h2>
+                <small>FCFA</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card {% if avoirs_total > 0 %}bg-info text-white{% else %}bg-light{% endif %} h-100">
+            <div class="card-body">
+                <h6 class="{% if avoirs_total > 0 %}text-white-50{% else %}text-muted{% endif %}">Avoirs disponibles</h6>
+                <h2 class="mb-0">{{ avoirs_total|floatformat:0 }}</h2>
+                <small>FCFA</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Infos client & score -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i>Informations</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Type:</strong> 
+                    <span class="badge {% if customer.customer_type == 'B2B' %}bg-primary{% else %}bg-info{% endif %}">
+                        {{ customer.customer_type }}
+                    </span>
+                </p>
+                <p><strong>Email:</strong> {{ customer.email|default:"-" }}</p>
+                <p><strong>Téléphone:</strong> {{ customer.phone|default:"-" }}</p>
+                <p><strong>Limite crédit:</strong> {{ customer.credit_limit|floatformat:0 }} FCFA</p>
+                <p><strong>Délai paiement:</strong> {{ customer.payment_terms }} jours</p>
+                <p><strong>Solde actuel:</strong> 
+                    <span class="{% if customer.balance > 0 %}text-danger{% elif customer.balance < 0 %}text-success{% endif %}">
+                        {{ customer.balance|floatformat:0 }} FCFA
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-star me-2"></i>Score Client</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if customer.importance_score %}
+                <div class="display-1 mb-2 
+                    {% if customer.importance_score >= 80 %}text-success
+                    {% elif customer.importance_score >= 50 %}text-warning
+                    {% else %}text-danger{% endif %}">
+                    {{ customer.importance_score }}
+                </div>
+                <p class="text-muted">/ 100</p>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar 
+                        {% if customer.importance_score >= 80 %}bg-success
+                        {% elif customer.importance_score >= 50 %}bg-warning
+                        {% else %}bg-danger{% endif %}" 
+                         style="width: {{ customer.importance_score }}%;">
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">Score non calculé</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Répartition commandes</h5>
+            </div>
+            <div class="card-body">
+                {% for stat in orders_by_status %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>
+                        {% if stat.status == 'draft' %}Brouillon
+                        {% elif stat.status == 'confirmed' %}Confirmée
+                        {% elif stat.status == 'processing' %}En cours
+                        {% elif stat.status == 'ready' %}Prête
+                        {% elif stat.status == 'delivered' %}Livrée
+                        {% elif stat.status == 'invoiced' %}Facturée
+                        {% elif stat.status == 'cancelled' %}Annulée
+                        {% else %}{{ stat.status }}{% endif %}
+                    </span>
+                    <span class="badge bg-secondary">{{ stat.count }}</span>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">Aucune commande</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Dernières commandes -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Dernières commandes</h5>
+                <a href="{% url 'crm:order_list' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">Voir tout</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>N°</th>
+                            <th>Date</th>
+                            <th class="text-end">Montant</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'crm:order_detail' order.pk %}">{{ order.order_number }}</a>
+                            </td>
+                            <td>{{ order.created_at|date:"d/m/Y" }}</td>
+                            <td class="text-end">{{ order.total|floatformat:0 }}</td>
+                            <td>
+                                {% if order.status == 'invoiced' %}
+                                <span class="badge bg-success">Facturée</span>
+                                {% elif order.status == 'delivered' %}
+                                <span class="badge bg-primary">Livrée</span>
+                                {% elif order.status == 'cancelled' %}
+                                <span class="badge bg-danger">Annulée</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">Aucune commande</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Derniers paiements -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-cash me-2"></i>Derniers paiements</h5>
+                <a href="{% url 'crm:payment_list' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">Voir tout</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Réf</th>
+                            <th>Date</th>
+                            <th class="text-end">Montant</th>
+                            <th>Méthode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in recent_payments %}
+                        <tr>
+                            <td>{{ payment.reference }}</td>
+                            <td>{{ payment.payment_date|date:"d/m/Y" }}</td>
+                            <td class="text-end text-success">+{{ payment.amount|floatformat:0 }}</td>
+                            <td>
+                                {% if payment.method == 'cash' %}Espèces
+                                {% elif payment.method == 'orange_money' %}Orange Money
+                                {% elif payment.method == 'wave' %}Wave
+                                {% else %}{{ payment.method }}{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">Aucun paiement</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historique mensuel (graphique simple) -->
+{% if monthly_orders %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Historique CA (12 derniers mois)</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for month in monthly_orders %}
+            <div class="col text-center">
+                <div style="height: 100px; display: flex; align-items: flex-end; justify-content: center;">
+                    {% widthratio month.total orders_total 100 as bar_height %}
+                    <div class="bg-primary rounded-top" style="width: 30px; height: {{ bar_height|default:5 }}%;"></div>
+                </div>
+                <small class="text-muted">{{ month.month|date:"M" }}</small>
+                <br><small>{{ month.count }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

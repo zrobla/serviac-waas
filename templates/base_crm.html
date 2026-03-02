@@ -70,6 +70,54 @@
             background-color: var(--serviac-dark); 
             color: white;
         }
+        /* Recherche globale (Ctrl+K) */
+        .search-modal .modal-content {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .search-input {
+            border: none;
+            font-size: 1.1rem;
+            padding: 1rem;
+        }
+        .search-input:focus {
+            box-shadow: none;
+        }
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .search-result-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .search-result-item:hover, .search-result-item.selected {
+            background-color: #f8f9fa;
+        }
+        .search-result-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 1.1rem;
+        }
+        .search-result-icon.customer { background: #e8f5e9; color: #2e7d32; }
+        .search-result-icon.order { background: #e3f2fd; color: #1976d2; }
+        .search-result-icon.product { background: #fff3e0; color: #f57c00; }
+        .search-result-icon.invoice { background: #fce4ec; color: #c2185b; }
+        .kbd { 
+            background: #eee; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-size: 0.8rem;
+            border: 1px solid #ddd;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -241,6 +289,12 @@
         <div class="top-bar">
             <h4 class="mb-0">{% block page_title %}{{ page_title|default:"Dashboard" }}{% endblock %}</h4>
             <div class="d-flex align-items-center gap-3">
+                <!-- Recherche globale -->
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#searchModal" title="Recherche (Ctrl+K)">
+                    <i class="bi bi-search me-1"></i>
+                    <span class="text-muted small">Rechercher...</span>
+                    <span class="kbd ms-2">Ctrl+K</span>
+                </button>
                 <a href="{% url 'crm:notification_list' %}" class="btn btn-light position-relative">
                     <i class="bi bi-bell"></i>
                     <span class="badge bg-danger position-absolute top-0 start-100 translate-middle" id="notif-badge" style="display:none;">0</span>
@@ -263,7 +317,125 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Modal Recherche Globale -->
+    <div class="modal fade search-modal" id="searchModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-0">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control search-input" id="globalSearchInput" 
+                               placeholder="Rechercher clients, commandes, produits..." autocomplete="off">
+                        <button type="button" class="btn btn-light border-0" data-bs-dismiss="modal">
+                            <span class="kbd">Esc</span>
+                        </button>
+                    </div>
+                    <div class="search-results" id="searchResults">
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-1 opacity-50"></i>
+                            <p class="mb-0 mt-2">Tapez pour rechercher...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script recherche globale -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchModal = document.getElementById('searchModal');
+        const searchInput = document.getElementById('globalSearchInput');
+        const searchResults = document.getElementById('searchResults');
+        let searchTimeout;
+        let selectedIndex = -1;
+        
+        // Ctrl+K pour ouvrir
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                new bootstrap.Modal(searchModal).show();
+            }
+        });
+        
+        // Focus sur input à l'ouverture
+        searchModal.addEventListener('shown.bs.modal', function() {
+            searchInput.focus();
+            searchInput.select();
+        });
+        
+        // Recherche
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                searchResults.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-search fs-1 opacity-50"></i>
+                        <p class="mb-0 mt-2">Tapez au moins 2 caractères...</p>
+                    </div>`;
+                return;
+            }
+            
+            searchResults.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                </div>`;
+            
+            searchTimeout = setTimeout(function() {
+                fetch(`{% url 'crm:global_search' %}?q=${encodeURIComponent(query)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.results.length === 0) {
+                            searchResults.innerHTML = `
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox fs-1 opacity-50"></i>
+                                    <p class="mb-0 mt-2">Aucun résultat pour "${query}"</p>
+                                </div>`;
+                            return;
+                        }
+                        
+                        searchResults.innerHTML = data.results.map((r, i) => `
+                            <a href="${r.url}" class="search-result-item text-decoration-none text-dark ${i === 0 ? 'selected' : ''}">
+                                <div class="search-result-icon ${r.type}">
+                                    <i class="bi ${r.icon}"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-medium">${r.label}</div>
+                                    <small class="text-muted">${r.sublabel}</small>
+                                </div>
+                            </a>
+                        `).join('');
+                        selectedIndex = 0;
+                    });
+            }, 300);
+        });
+        
+        // Navigation clavier
+        searchInput.addEventListener('keydown', function(e) {
+            const items = searchResults.querySelectorAll('.search-result-item');
+            if (items.length === 0) return;
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            }
+            
+            items.forEach((item, i) => {
+                item.classList.toggle('selected', i === selectedIndex);
+            });
+        });
+    });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,4 +1,5 @@
 """SERVIAC CRM - Views"""
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -1613,3 +1614,212 @@ class ReportView(LoginRequiredMixin, TemplateView):
 # Import models for F expression
 from django.db import models
 from django.urls import reverse
+
+
+# ==============================================================
+# PHASE 8: Optimisation UX & Productivité
+# ==============================================================
+
+class GlobalSearchView(LoginRequiredMixin, View):
+    """Recherche globale - accessible via Ctrl+K"""
+    
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+        
+        if len(query) < 2:
+            return JsonResponse({'results': []})
+        
+        results = []
+        
+        # Recherche clients
+        customers = Customer.objects.filter(
+            Q(name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(phone__icontains=query) |
+            Q(company__icontains=query)
+        )[:5]
+        
+        for c in customers:
+            results.append({
+                'type': 'customer',
+                'icon': 'bi-person',
+                'label': c.name,
+                'sublabel': f'{c.customer_type} - {c.phone or c.email or ""}',
+                'url': reverse('crm:customer_detail', args=[c.pk])
+            })
+        
+        # Recherche commandes
+        orders = Order.objects.filter(
+            Q(order_number__icontains=query) |
+            Q(customer__name__icontains=query)
+        ).select_related('customer')[:5]
+        
+        for o in orders:
+            results.append({
+                'type': 'order',
+                'icon': 'bi-cart',
+                'label': f'Commande {o.order_number}',
+                'sublabel': f'{o.customer.name} - {o.total} FCFA',
+                'url': reverse('crm:order_detail', args=[o.pk])
+            })
+        
+        # Recherche produits
+        products = Product.objects.filter(
+            Q(name__icontains=query) |
+            Q(sku__icontains=query)
+        )[:5]
+        
+        for p in products:
+            results.append({
+                'type': 'product',
+                'icon': 'bi-box',
+                'label': p.name,
+                'sublabel': f'{p.stock_quantity} en stock - {p.price_b2b} FCFA',
+                'url': reverse('crm:product_detail', args=[p.pk])
+            })
+        
+        # Recherche factures
+        invoices = Invoice.objects.filter(
+            Q(invoice_number__icontains=query) |
+            Q(customer__name__icontains=query)
+        ).select_related('customer')[:5]
+        
+        for inv in invoices:
+            results.append({
+                'type': 'invoice',
+                'icon': 'bi-receipt',
+                'label': f'Facture {inv.invoice_number}',
+                'sublabel': f'{inv.customer.name} - {inv.total} FCFA',
+                'url': reverse('crm:invoice_detail', args=[inv.pk])
+            })
+        
+        return JsonResponse({'results': results[:15]})
+
+
+class QuickOrderCreateView(LoginRequiredMixin, View):
+    """Création rapide de commande depuis fiche client"""
+    
+    def post(self, request, customer_pk):
+        customer = get_object_or_404(Customer, pk=customer_pk)
+        
+        # Créer commande brouillon
+        order = Order.objects.create(
+            customer=customer,
+            status=OrderStatus.DRAFT,
+            payment_terms=customer.payment_terms,
+            created_by=request.user
+        )
+        
+        messages.success(request, f'Commande {order.order_number} créée pour {customer.name}')
+        return redirect('crm:order_detail', pk=order.pk)
+
+
+class QuickPaymentView(LoginRequiredMixin, View):
+    """Encaissement rapide depuis commande/facture"""
+    
+    def post(self, request, invoice_pk):
+        invoice = get_object_or_404(Invoice, pk=invoice_pk)
+        
+        amount = request.POST.get('amount')
+        method = request.POST.get('method', 'cash')
+        
+        try:
+            amount = Decimal(amount)
+        except:
+            messages.error(request, 'Montant invalide')
+            return redirect('crm:invoice_detail', pk=invoice_pk)
+        
+        if amount <= 0:
+            messages.error(request, 'Le montant doit être positif')
+            return redirect('crm:invoice_detail', pk=invoice_pk)
+        
+        # Créer le paiement
+        payment = Payment.objects.create(
+            customer=invoice.customer,
+            invoice=invoice,
+            amount=amount,
+            method=method,
+            reference=f'ENC-{timezone.now().strftime("%Y%m%d%H%M%S")}',
+            received_by=request.user,
+            notes=f'Encaissement rapide facture {invoice.invoice_number}'
+        )
+        
+        # Mettre à jour la facture
+        invoice.amount_paid += amount
+        if invoice.amount_paid >= invoice.total:
+            invoice.status = InvoiceStatus.PAID
+        elif invoice.amount_paid > 0:
+            invoice.status = InvoiceStatus.PARTIAL
+        invoice.save()
+        
+        # Créer entrée caisse
+        CashRegisterEntry.objects.create(
+            entry_type='in',
+            amount=amount,
+            payment_method=method,
+            description=f'Paiement facture {invoice.invoice_number}',
+            reference=payment.reference,
+            payment=payment,
+            created_by=request.user
+        )
+        
+        messages.success(request, f'Paiement de {amount} FCFA enregistré')
+        return redirect('crm:invoice_detail', pk=invoice_pk)
+
+
+class CustomerStatsView(LoginRequiredMixin, TemplateView):
+    """Statistiques détaillées d'un client"""
+    template_name = 'crm/customer_stats.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        customer = get_object_or_404(Customer, pk=self.kwargs['pk'])
+        context['customer'] = customer
+        
+        # Commandes
+        orders = Order.objects.filter(customer=customer)
+        context['orders_count'] = orders.count()
+        context['orders_total'] = orders.aggregate(total=Sum('total'))['total'] or 0
+        
+        # Par statut
+        context['orders_by_status'] = orders.values('status').annotate(count=Count('id'))
+        
+        # Paiements
+        payments = Payment.objects.filter(customer=customer)
+        context['payments_total'] = payments.aggregate(total=Sum('amount'))['total'] or 0
+        context['payments_count'] = payments.count()
+        
+        # Factures
+        invoices = Invoice.objects.filter(customer=customer)
+        context['invoices_count'] = invoices.count()
+        context['invoices_unpaid'] = invoices.filter(
+            status__in=[InvoiceStatus.SENT, InvoiceStatus.PARTIAL, InvoiceStatus.OVERDUE]
+        ).aggregate(total=Sum(F('total') - F('amount_paid')))['total'] or 0
+        
+        # Historique mensuel (12 derniers mois)
+        from django.db.models.functions import TruncMonth
+        monthly_orders = orders.filter(
+            created_at__gte=timezone.now() - timedelta(days=365)
+        ).annotate(
+            month=TruncMonth('created_at')
+        ).values('month').annotate(
+            total=Sum('total'),
+            count=Count('id')
+        ).order_by('month')
+        context['monthly_orders'] = list(monthly_orders)
+        
+        # Avoirs
+        avoirs = CustomerCredit.objects.filter(customer=customer, is_used=False)
+        context['avoirs_total'] = avoirs.aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Score client
+        context['score'] = customer.calculate_score() if hasattr(customer, 'calculate_score') else None
+        
+        # Dernières commandes
+        context['recent_orders'] = orders.order_by('-created_at')[:10]
+        
+        # Derniers paiements
+        context['recent_payments'] = payments.order_by('-payment_date')[:10]
+        
+        return context
+
