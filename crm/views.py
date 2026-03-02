@@ -2372,7 +2372,6 @@ class SaleCreateView(LoginRequiredMixin, View):
             # Mettre à jour les totaux
             invoice.subtotal = total_ht
             invoice.total = total_ht  # Pas de TVA pour l'instant
-            invoice.amount_paid = total_ht
             invoice.save()
             
             # Créer le paiement
