@@ -174,49 +174,56 @@
         
         <div class="row align-items-center">
             <div class="col-lg-7" data-aos="fade-right">
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="fw-bold">Protéines brutes</span>
-                        <span class="fw-bold" style="color: var(--serviac-gold);">53%</span>
+                <!-- Protéines - Principal -->
+                <div class="composition-item mb-4 p-4 rounded-4" style="background: linear-gradient(135deg, rgba(212, 168, 75, 0.1), rgba(212, 168, 75, 0.05)); border-left: 4px solid var(--serviac-gold);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <i class="bi bi-lightning-charge-fill me-2" style="color: var(--serviac-gold);"></i>
+                            <span class="fw-bold fs-5">Protéines brutes</span>
+                        </div>
+                        <span class="display-6 fw-bold" style="color: var(--serviac-gold);">53%</span>
                     </div>
-                    <div class="composition-bar">
-                        <div class="progress-bar" style="width: 53%;">53%</div>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="fw-bold">Matières minérales</span>
-                        <span class="fw-bold" style="color: var(--serviac-gold);">26.5%</span>
-                    </div>
-                    <div class="composition-bar">
-                        <div class="progress-bar" style="width: 26.5%;">26.5%</div>
+                    <div class="progress" style="height: 12px; border-radius: 6px; background: rgba(0,0,0,0.1);">
+                        <div class="progress-bar" style="width: 53%; background: linear-gradient(90deg, var(--serviac-gold), #e8c36a); border-radius: 6px;"></div>
                     </div>
                 </div>
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="fw-bold">Humidité</span>
-                        <span class="fw-bold" style="color: var(--serviac-blue);">7%</span>
+                
+                <!-- Matières minérales -->
+                <div class="composition-item mb-4 p-3 rounded-3" style="background: var(--serviac-light);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <i class="bi bi-gem me-2" style="color: var(--serviac-blue);"></i>
+                            <span class="fw-semibold">Matières minérales</span>
+                        </div>
+                        <span class="fs-4 fw-bold" style="color: var(--serviac-blue);">26.5%</span>
                     </div>
-                    <div class="composition-bar">
-                        <div class="progress-bar" style="width: 7%;">7%</div>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="fw-bold">NaCl (Sel)</span>
-                        <span class="fw-bold" style="color: var(--serviac-blue);">4.5%</span>
-                    </div>
-                    <div class="composition-bar">
-                        <div class="progress-bar" style="width: 4.5%;">4.5%</div>
+                    <div class="progress" style="height: 8px; border-radius: 4px; background: rgba(0,0,0,0.08);">
+                        <div class="progress-bar" style="width: 26.5%; background: var(--serviac-blue); border-radius: 4px;"></div>
                     </div>
                 </div>
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="fw-bold">Impuretés</span>
-                        <span class="fw-bold text-success">&lt; 2%</span>
+                
+                <!-- Autres éléments en grid -->
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="text-center p-3 rounded-3 border h-100">
+                            <i class="bi bi-droplet fs-4 d-block mb-2" style="color: var(--serviac-blue);"></i>
+                            <small class="text-muted d-block">Humidité</small>
+                            <span class="fs-5 fw-bold" style="color: var(--serviac-blue);">7%</span>
+                        </div>
                     </div>
-                    <div class="composition-bar">
-                        <div class="progress-bar bg-success" style="width: 2%;">&lt;2%</div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 rounded-3 border h-100">
+                            <i class="bi bi-snow fs-4 d-block mb-2" style="color: var(--serviac-gray);"></i>
+                            <small class="text-muted d-block">NaCl (Sel)</small>
+                            <span class="fs-5 fw-bold" style="color: var(--serviac-gray);">4.5%</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 rounded-3 border border-success h-100" style="background: rgba(40, 167, 69, 0.05);">
+                            <i class="bi bi-shield-check fs-4 d-block mb-2 text-success"></i>
+                            <small class="text-muted d-block">Impuretés</small>
+                            <span class="fs-5 fw-bold text-success">&lt; 2%</span>
+                        </div>
                     </div>
                 </div>
             </div>
