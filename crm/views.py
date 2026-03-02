@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.db.models import Count, Q, Sum, F
 from datetime import timedelta
 
-from .models import Customer, Product, Category, OrderInbox, Notification, OrderInboxStatus
+from .models import Customer, Product, Category, OrderInbox, Notification, OrderInboxStatus, CustomerType
 from .forms import CustomerForm, ProductForm
 
 
@@ -242,6 +242,11 @@ from .forms import OrderForm, OrderItemFormSet
 
 class OrderInboxConvertView(LoginRequiredMixin, View):
     """Convertit une demande inbox en commande"""
+    
+    def get(self, request, pk):
+        """Redirige vers la page de détail si accès en GET"""
+        return redirect('crm:inbox_detail', pk=pk)
+    
     def post(self, request, pk):
         inbox = get_object_or_404(OrderInbox, pk=pk)
         
@@ -597,6 +602,11 @@ class CashRegisterView(LoginRequiredMixin, TemplateView):
 
 class CashRegisterOpenView(LoginRequiredMixin, View):
     """Ouvrir une nouvelle session de caisse"""
+    
+    def get(self, request):
+        """Redirige vers la page caisse si accès en GET"""
+        return redirect('crm:cash_register')
+    
     def post(self, request):
         # Vérifier qu'aucune caisse n'est ouverte
         if CashRegister.objects.filter(status=CashRegisterStatus.OPEN).exists():
@@ -621,6 +631,11 @@ class CashRegisterOpenView(LoginRequiredMixin, View):
 
 class CashRegisterCloseView(LoginRequiredMixin, View):
     """Clôturer la session de caisse"""
+    
+    def get(self, request):
+        """Redirige vers la page caisse si accès en GET"""
+        return redirect('crm:cash_register')
+    
     def post(self, request):
         register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
         if not register:
@@ -1351,7 +1366,7 @@ class EmailPreviewView(LoginRequiredMixin, View):
             'order_date': '02/01/2025',
             'amount': '500 000',
             'items_count': 5,
-            'invoice_number': 'FAC-202501-0001',
+            'invoice_number': 'SGS-202501-0001',
             'due_date': '15/01/2025',
             'payment_date': '10/01/2025',
             'payment_ref': 'PAY-20250110-0001',
@@ -1861,12 +1876,12 @@ class ExportCustomersView(LoginRequiredMixin, View):
         response.write('\ufeff')  # BOM UTF-8
         
         writer = csv.writer(response, delimiter=';')
-        writer.writerow(['Nom', 'Type', 'Email', 'Téléphone', 'Entreprise', 'Limite Crédit', 'Solde', 'Score'])
+        writer.writerow(['Nom', 'Type', 'Email', 'Téléphone', 'Ville', 'Limite Crédit', 'Solde', 'Score'])
         
         for c in customers:
             writer.writerow([
                 c.name, c.customer_type, c.email or '', c.phone or '',
-                c.company or '', c.credit_limit, c.balance, c.importance_score or ''
+                c.city or '', c.credit_limit, c.balance, c.manual_score or ''
             ])
         
         return response
@@ -1883,7 +1898,7 @@ class ExportCustomersView(LoginRequiredMixin, View):
         header_fill = PatternFill(start_color="1a5f2a", end_color="1a5f2a", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
         
-        headers = ['Nom', 'Type', 'Email', 'Téléphone', 'Entreprise', 'Limite Crédit', 'Solde', 'Score']
+        headers = ['Nom', 'Type', 'Email', 'Téléphone', 'Ville', 'Limite Crédit', 'Solde', 'Score']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.fill = header_fill
@@ -1896,10 +1911,10 @@ class ExportCustomersView(LoginRequiredMixin, View):
             ws.cell(row=row, column=2, value=c.customer_type)
             ws.cell(row=row, column=3, value=c.email or '')
             ws.cell(row=row, column=4, value=c.phone or '')
-            ws.cell(row=row, column=5, value=c.company or '')
+            ws.cell(row=row, column=5, value=c.city or '')
             ws.cell(row=row, column=6, value=float(c.credit_limit))
             ws.cell(row=row, column=7, value=float(c.balance))
-            ws.cell(row=row, column=8, value=c.importance_score or '')
+            ws.cell(row=row, column=8, value=c.manual_score or '')
         
         # Largeur colonnes
         ws.column_dimensions['A'].width = 30
@@ -2089,13 +2104,12 @@ class ExportStockView(LoginRequiredMixin, View):
         response.write('\ufeff')
         
         writer = csv.writer(response, delimiter=';')
-        writer.writerow(['Référence', 'Produit', 'Catégorie', 'Stock actuel', 'Seuil alerte', 'Réservé', 'Disponible', 'Prix B2B', 'Prix B2C'])
+        writer.writerow(['Référence', 'Produit', 'Catégorie', 'Stock actuel', 'Seuil alerte', 'Prix B2B', 'Prix B2C'])
         
         for p in products:
             writer.writerow([
-                p.sku, p.name, p.category.name if p.category else '',
-                p.stock_quantity, p.alert_threshold, p.reserved_quantity,
-                p.stock_quantity - p.reserved_quantity,
+                p.code, p.name, p.category.name if p.category else '',
+                p.stock_quantity, p.alert_threshold,
                 p.price_b2b, p.price_b2c
             ])
         
@@ -2113,31 +2127,27 @@ class ExportStockView(LoginRequiredMixin, View):
         header_font = Font(bold=True, color="FFFFFF")
         alert_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
         
-        headers = ['Référence', 'Produit', 'Catégorie', 'Stock', 'Seuil', 'Réservé', 'Disponible', 'Prix B2B', 'Prix B2C']
+        headers = ['Référence', 'Produit', 'Catégorie', 'Stock', 'Seuil', 'Prix B2B', 'Prix B2C']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.fill = header_fill
             cell.font = header_font
         
         for row, p in enumerate(products, 2):
-            available = p.stock_quantity - p.reserved_quantity
-            
-            ws.cell(row=row, column=1, value=p.sku)
+            ws.cell(row=row, column=1, value=p.code)
             ws.cell(row=row, column=2, value=p.name)
             ws.cell(row=row, column=3, value=p.category.name if p.category else '')
             ws.cell(row=row, column=4, value=float(p.stock_quantity))
             ws.cell(row=row, column=5, value=float(p.alert_threshold))
-            ws.cell(row=row, column=6, value=float(p.reserved_quantity))
-            ws.cell(row=row, column=7, value=float(available))
-            ws.cell(row=row, column=8, value=float(p.price_b2b))
-            ws.cell(row=row, column=9, value=float(p.price_b2c))
+            ws.cell(row=row, column=6, value=float(p.price_b2b))
+            ws.cell(row=row, column=7, value=float(p.price_b2c))
             
             # Surligner en rouge si stock < seuil
             if p.stock_quantity <= p.alert_threshold:
-                for col in range(1, 10):
+                for col in range(1, 8):
                     ws.cell(row=row, column=col).fill = alert_fill
         
-        for col, width in enumerate([12, 35, 20, 10, 10, 10, 12, 12, 12], 1):
+        for col, width in enumerate([12, 35, 20, 10, 10, 12, 12], 1):
             ws.column_dimensions[chr(64 + col)].width = width
         
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -2298,12 +2308,23 @@ class SaleCreateView(LoginRequiredMixin, View):
             customer = None
             if customer_id:
                 customer = get_object_or_404(Customer, pk=customer_id)
+            else:
+                # Créer ou récupérer un client "Vente Comptoir" pour les ventes anonymes
+                customer, created = Customer.objects.get_or_create(
+                    name="Client Comptoir",
+                    defaults={
+                        'customer_type': CustomerType.B2C,
+                        'phone': '0000000000',
+                        'city': 'Abidjan',
+                        'notes': 'Client générique pour les ventes comptoir anonymes'
+                    }
+                )
             
             # Créer la facture
             invoice = Invoice.objects.create(
                 customer=customer,
                 status=InvoiceStatus.PAID,
-                date=timezone.now().date(),
+                invoice_date=timezone.now().date(),
                 due_date=timezone.now().date(),
                 notes=notes,
                 created_by=request.user
@@ -2329,18 +2350,18 @@ class SaleCreateView(LoginRequiredMixin, View):
                 InvoiceItem.objects.create(
                     invoice=invoice,
                     product=product,
+                    description=product.name,
                     quantity=quantity,
                     unit_price=unit_price,
-                    total=line_total
+                    line_total=line_total
                 )
                 
                 # Mouvement de stock (sortie)
                 StockMovement.objects.create(
                     product=product,
-                    movement_type=StockMovementType.SALE,
+                    movement_type=StockMovementType.OUT,
                     quantity=-quantity,
-                    reference=f"VENTE-{invoice.number}",
-                    notes=f"Vente express #{invoice.number}",
+                    reason=f"Vente express #{invoice.number}",
                     created_by=request.user
                 )
                 
@@ -2361,8 +2382,7 @@ class SaleCreateView(LoginRequiredMixin, View):
                 amount=total_ht,
                 payment_method=payment_method,
                 payment_type=PaymentType.PAYMENT,
-                reference=payment_reference or f"VENTE-{invoice.number}",
-                status=PaymentStatus.COMPLETED,
+                transaction_ref=payment_reference or '',
                 notes=f"Paiement vente express #{invoice.number}",
                 created_by=request.user
             )
@@ -2372,21 +2392,23 @@ class SaleCreateView(LoginRequiredMixin, View):
                 open_register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
                 if open_register:
                     CashMovement.objects.create(
-                        register=open_register,
-                        payment=payment,
+                        cash_register=open_register,
+                        movement_type='in',
                         amount=total_ht,
-                        description=f"Vente express #{invoice.number}",
+                        reason=f"Vente express #{invoice.number}",
                         created_by=request.user
                     )
-                    open_register.current_balance += total_ht
+                    open_register.expected_balance += total_ht
+                    open_register.total_cash += total_ht
                     open_register.save()
             
             # Audit log
             AuditLog.objects.create(
                 user=request.user,
+                user_name=request.user.get_full_name() or request.user.username,
                 action=AuditAction.CREATE,
                 model_name='Invoice',
-                object_id=invoice.id,
+                object_id=str(invoice.id),
                 object_repr=str(invoice),
                 changes={'type': 'Vente express', 'total': str(total_ht)}
             )
@@ -2410,7 +2432,7 @@ class SaleDetailView(LoginRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = f'Vente #{self.object.invoice_number}'
+        context['page_title'] = f'Vente #{self.object.number}'
         context['items'] = self.object.items.select_related('product')
         context['payments'] = self.object.payments.all()
         return context
@@ -2483,13 +2505,34 @@ class SalePDFView(LoginRequiredMixin, View):
         # Contenu
         elements = []
         
-        # Logo et en-tête
-        elements.append(Paragraph("SERVIAC GROUP SUARL", title_style))
-        elements.append(Paragraph("Farine de Poisson Premium - Nutrition Animale", header_style))
-        elements.append(Paragraph("N'Dotré, près de Hotel Dandy, Abidjan - Côte d'Ivoire", header_style))
-        elements.append(Paragraph("Tél: +225 07 79 05 71 01 / WhatsApp: +225 07 01 80 80 49", header_style))
-        elements.append(Paragraph("Email: info@serviac-group.com", header_style))
-        elements.append(Spacer(1, 0.5*cm))
+        # Logo et en-tête avec logo image
+        from django.conf import settings
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo-serviac.png')
+        
+        # En-tête avec logo
+        header_data = []
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, width=3.5*cm, height=3.5*cm)
+            header_data = [[logo, [
+                Paragraph("SERVIAC GROUP SUARL", title_style),
+                Paragraph("Farine de Poisson Premium - Nutrition Animale", header_style),
+                Paragraph("N'Dotré, près de Hotel Dandy, Abidjan - Côte d'Ivoire", header_style),
+                Paragraph("Tél: +225 07 79 05 71 01 / +225 07 01 80 80 49", header_style),
+                Paragraph("Email: info@serviac-group.com", header_style),
+            ]]]
+            header_table = Table(header_data, colWidths=[4*cm, 14*cm])
+            header_table.setStyle(TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('ALIGN', (0,0), (0,0), 'CENTER'),
+            ]))
+            elements.append(header_table)
+        else:
+            elements.append(Paragraph("SERVIAC GROUP SUARL", title_style))
+            elements.append(Paragraph("Farine de Poisson Premium - Nutrition Animale", header_style))
+            elements.append(Paragraph("N'Dotré, près de Hotel Dandy, Abidjan - Côte d'Ivoire", header_style))
+            elements.append(Paragraph("Tél: +225 07 79 05 71 01 / +225 07 01 80 80 49", header_style))
+            elements.append(Paragraph("Email: info@serviac-group.com", header_style))
+        elements.append(Spacer(1, 0.3*cm))
         
         # Ligne de séparation
         elements.append(Table([['']], colWidths=[18*cm], style=[
@@ -2506,7 +2549,7 @@ class SalePDFView(LoginRequiredMixin, View):
         
         # Informations facture et client
         info_data = [
-            [Paragraph(f"<b>Date:</b> {invoice.date.strftime('%d/%m/%Y')}", normal_style),
+            [Paragraph(f"<b>Date:</b> {invoice.invoice_date.strftime('%d/%m/%Y')}", normal_style),
              Paragraph(f"<b>Client:</b> {invoice.customer.name if invoice.customer else 'Vente Comptoir'}", normal_style)],
             [Paragraph(f"<b>Échéance:</b> {invoice.due_date.strftime('%d/%m/%Y')}", normal_style),
              Paragraph(f"<b>Tél:</b> {invoice.customer.phone if invoice.customer else '-'}", normal_style)],
@@ -2529,12 +2572,15 @@ class SalePDFView(LoginRequiredMixin, View):
         # Tableau des articles
         items = invoice.items.select_related('product').all()
         
+        # Style pour en-tête blanc
+        header_white_style = ParagraphStyle('HeaderWhite', parent=bold_style, textColor=colors.white)
+        
         table_data = [
-            [Paragraph('<b>Réf.</b>', bold_style),
-             Paragraph('<b>Désignation</b>', bold_style),
-             Paragraph('<b>Qté</b>', bold_style),
-             Paragraph('<b>P.U. (FCFA)</b>', bold_style),
-             Paragraph('<b>Total (FCFA)</b>', bold_style)]
+            [Paragraph('<b>Réf.</b>', header_white_style),
+             Paragraph('<b>Désignation</b>', header_white_style),
+             Paragraph('<b>Qté</b>', header_white_style),
+             Paragraph('<b>P.U. (FCFA)</b>', header_white_style),
+             Paragraph('<b>Total (FCFA)</b>', header_white_style)]
         ]
         
         for item in items:
@@ -2543,7 +2589,7 @@ class SalePDFView(LoginRequiredMixin, View):
                 Paragraph(item.description or (item.product.name if item.product else '-'), normal_style),
                 Paragraph(f"{item.quantity:,.0f}", normal_style),
                 Paragraph(f"{item.unit_price:,.0f}", normal_style),
-                Paragraph(f"{item.total:,.0f}", normal_style)
+                Paragraph(f"{item.line_total:,.0f}", normal_style)
             ])
         
         item_table = Table(table_data, colWidths=[2.5*cm, 8*cm, 2*cm, 2.75*cm, 2.75*cm])
@@ -2562,17 +2608,20 @@ class SalePDFView(LoginRequiredMixin, View):
         elements.append(item_table)
         elements.append(Spacer(1, 0.5*cm))
         
-        # Totaux
+        # Totaux - alignement corrigé avec montant et FCFA sur même ligne
+        total_right_style = ParagraphStyle('TotalRight', parent=bold_style, fontSize=10, alignment=TA_RIGHT)
+        total_ttc_style = ParagraphStyle('TotalTTC', parent=bold_style, fontSize=11, textColor=colors.HexColor('#1e3a5f'), alignment=TA_RIGHT)
+        
         totals_data = [
-            ['', '', '', Paragraph('<b>Total HT:</b>', bold_style), Paragraph(f"<b>{invoice.subtotal:,.0f} FCFA</b>", bold_style)],
-            ['', '', '', Paragraph('<b>TVA:</b>', bold_style), Paragraph(f"<b>{invoice.tax_amount:,.0f} FCFA</b>", bold_style)],
-            ['', '', '', Paragraph('<b>TOTAL TTC:</b>', ParagraphStyle('TotalBold', parent=bold_style, fontSize=12, textColor=colors.HexColor('#1e3a5f'))), 
-             Paragraph(f"<b>{invoice.total:,.0f} FCFA</b>", ParagraphStyle('TotalBold', parent=bold_style, fontSize=12, textColor=colors.HexColor('#1e3a5f')))],
+            ['', '', '', Paragraph('<b>Total HT:</b>', total_right_style), Paragraph(f"<b>{invoice.subtotal:,.0f} FCFA</b>", total_right_style)],
+            ['', '', '', Paragraph('<b>TVA:</b>', total_right_style), Paragraph(f"<b>{invoice.tax_amount:,.0f} FCFA</b>", total_right_style)],
+            ['', '', '', Paragraph('<b>TOTAL TTC:</b>', total_ttc_style), Paragraph(f"<b>{invoice.total:,.0f} FCFA</b>", total_ttc_style)],
         ]
         
         totals_table = Table(totals_data, colWidths=[2.5*cm, 8*cm, 2*cm, 2.75*cm, 2.75*cm])
         totals_table.setStyle(TableStyle([
             ('ALIGN', (3,0), (-1,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('LINEABOVE', (3,2), (-1,2), 2, colors.HexColor('#d4a84b')),
             ('TOPPADDING', (0,2), (-1,2), 8),
         ]))
@@ -2597,13 +2646,23 @@ class SalePDFView(LoginRequiredMixin, View):
             elements.append(Paragraph(f"<b>Notes:</b> {invoice.notes}", normal_style))
             elements.append(Spacer(1, 0.5*cm))
         
-        # Pied de page
+        # Pied de page avec infos légales
         elements.append(Table([['']], colWidths=[18*cm], style=[
             ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor('#cccccc'))
         ]))
         elements.append(Spacer(1, 0.3*cm))
-        elements.append(Paragraph("Merci pour votre confiance! - SERVIAC GROUP", ParagraphStyle(
-            'Footer', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER, textColor=colors.HexColor('#666666')
+        
+        footer_style = ParagraphStyle('FooterInfo', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.HexColor('#666666'))
+        
+        elements.append(Paragraph("Merci pour votre confiance!", ParagraphStyle(
+            'FooterThanks', parent=styles['Normal'], fontSize=10, alignment=TA_CENTER, textColor=colors.HexColor('#1e3a5f'), fontName='Helvetica-Bold'
+        )))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(Paragraph("SERVIAC GROUP SUARL | Tél: (+225) 07 79 05 71 01 / 07 01 80 80 49 | Email: info@serviac-group.com", footer_style))
+        elements.append(Paragraph("Site Web: www.serviac-group.com | Situé à Carrefour Dandy, N'Dotré (Anyama) | Abidjan – CÔTE D'IVOIRE", footer_style))
+        elements.append(Spacer(1, 0.15*cm))
+        elements.append(Paragraph("<b>RCCM: CI-GRDBSM-2020-B-1011 | Compte Contribuable: 2018961 U</b>", ParagraphStyle(
+            'FooterLegal', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.HexColor('#1e3a5f')
         )))
         
         # Générer le PDF

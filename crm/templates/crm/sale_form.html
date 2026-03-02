@@ -116,7 +116,13 @@
                             {% for product in products %}
                             <div class="col-md-6 col-lg-4">
                                 <div class="card product-card h-100" 
-                                     data-product='{"id": {{ product.id }}, "code": "{{ product.code }}", "name": "{{ product.name }}", "price_b2b": {{ product.price_b2b }}, "price_b2c": {{ product.price_b2c }}, "stock": {{ product.stock_quantity }}, "unit": "{{ product.get_unit_display }}"}'>
+                                     data-id="{{ product.id }}"
+                                     data-code="{{ product.code }}"
+                                     data-name="{{ product.name|escapejs }}"
+                                     data-price-b2b="{{ product.price_b2b }}"
+                                     data-price-b2c="{{ product.price_b2c }}"
+                                     data-stock="{{ product.stock_quantity }}"
+                                     data-unit="{{ product.get_unit_display }}">
                                     <div class="card-body p-3">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <span class="badge bg-secondary">{{ product.code }}</span>
@@ -323,7 +329,15 @@
     // Clic sur carte produit
     document.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', function() {
-            const product = JSON.parse(this.dataset.product);
+            const product = {
+                id: parseInt(this.dataset.id),
+                code: this.dataset.code,
+                name: this.dataset.name,
+                price_b2b: parseFloat(this.dataset.priceB2b),
+                price_b2c: parseFloat(this.dataset.priceB2c),
+                stock: parseFloat(this.dataset.stock),
+                unit: this.dataset.unit
+            };
             openProductModal(product);
         });
     });

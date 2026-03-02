@@ -38,3 +38,14 @@ def subtract(value, arg):
         return float(value) - float(arg)
     except (TypeError, ValueError):
         return 0
+
+
+@register.filter
+def get_item(dictionary, key):
+    """Get item from dictionary by key"""
+    if dictionary is None:
+        return None
+    try:
+        return dictionary.get(key)
+    except (AttributeError, TypeError):
+        return None

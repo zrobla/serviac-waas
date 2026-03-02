@@ -1,4 +1,5 @@
 {% extends 'base_crm.html' %}
+{% load crm_filters %}
 
 {% block page_title %}Commande #{{ order.pk }}{% endblock %}
 
@@ -35,9 +36,12 @@
         </button>
     </div>
     {% elif order.status == 'validated' %}
-    <a href="{% url 'crm:inbox_convert' order.pk %}" class="btn btn-primary">
-        <i class="bi bi-arrow-right-circle me-1"></i>Convertir en commande
-    </a>
+    <form action="{% url 'crm:inbox_convert' order.pk %}" method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-arrow-right-circle me-1"></i>Convertir en commande
+        </button>
+    </form>
     {% endif %}
 </div>
 

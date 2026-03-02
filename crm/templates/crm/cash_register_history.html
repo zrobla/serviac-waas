@@ -1,0 +1,114 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Historique des caisses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history me-2"></i>Historique des sessions de caisse</h2>
+    <a href="{% url 'crm:cash_register' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Caisse actuelle
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Ouverture</th>
+                        <th>Clôture</th>
+                        <th class="text-end">Solde ouverture</th>
+                        <th class="text-end">Solde attendu</th>
+                        <th class="text-end">Solde clôture</th>
+                        <th class="text-end">Écart</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for register in registers %}
+                    <tr>
+                        <td>{{ register.session_date|date:"d/m/Y" }}</td>
+                        <td>
+                            {{ register.opened_at|time:"H:i" }}
+                            <small class="text-muted d-block">{{ register.opened_by.get_full_name|default:register.opened_by.username }}</small>
+                        </td>
+                        <td>
+                            {% if register.closed_at %}
+                            {{ register.closed_at|time:"H:i" }}
+                            <small class="text-muted d-block">{{ register.closed_by.get_full_name|default:register.closed_by.username }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ register.opening_balance|floatformat:0 }} FCFA</td>
+                        <td class="text-end">{{ register.expected_balance|floatformat:0 }} FCFA</td>
+                        <td class="text-end">
+                            {% if register.closing_balance %}
+                            {{ register.closing_balance|floatformat:0 }} FCFA
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if register.difference %}
+                                {% if register.difference > 0 %}
+                                <span class="text-success">+{{ register.difference|floatformat:0 }} FCFA</span>
+                                {% elif register.difference < 0 %}
+                                <span class="text-danger">{{ register.difference|floatformat:0 }} FCFA</span>
+                                {% else %}
+                                <span class="text-muted">0 FCFA</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if register.status == 'open' %}
+                            <span class="badge bg-success">Ouverte</span>
+                            {% elif register.status == 'closed' %}
+                            <span class="badge bg-secondary">Clôturée</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            Aucune session de caisse enregistrée
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item disabled">
+                    <span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

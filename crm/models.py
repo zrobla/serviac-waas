@@ -5,6 +5,7 @@ Modèles de données pour la gestion commerciale
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
+from django.utils import timezone
 from decimal import Decimal
 
 
@@ -458,7 +459,7 @@ class Invoice(models.Model):
     def generate_number(cls):
         from django.utils import timezone
         today = timezone.now()
-        prefix = f"FAC-{today.strftime('%Y%m')}"
+        prefix = f"SGS-{today.strftime('%Y%m')}"
         last = cls.objects.filter(number__startswith=prefix).order_by('-number').first()
         if last:
             last_num = int(last.number.split('-')[-1])
