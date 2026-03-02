@@ -1,0 +1,70 @@
+{% extends 'base_website.html' %}
+
+{% block title %}À Propos - SERVIAC GROUP{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="text-serviac mb-4">À Propos de SERVIAC GROUP</h1>
+                <p class="lead">
+                    Depuis <strong>2019</strong>, SERVIAC GROUP est votre partenaire de confiance pour 
+                    l'alimentation animale en Côte d'Ivoire.
+                </p>
+                <p>
+                    Basée à <strong>Abidjan</strong>, notre entreprise s'est imposée comme un acteur majeur 
+                    du secteur animalier grâce à notre engagement envers la qualité et le service client.
+                </p>
+                <p>
+                    Nous travaillons dans le domaine de la <strong>production, transformation, vente et 
+                    approvisionnement d'alimentation de bétail</strong> et bien plus encore.
+                </p>
+            </div>
+            <div class="col-lg-6">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title text-serviac"><i class="bi bi-bullseye me-2"></i>Notre Mission</h5>
+                        <p>
+                            Offrir des solutions complètes et innovantes pour le bien-être de vos animaux 
+                            tout en garantissant une qualité irréprochable et des prix compétitifs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <hr class="my-5">
+        
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <div class="bg-serviac text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                    <i class="bi bi-calendar-check fs-2"></i>
+                </div>
+                <h5 class="mt-3">Depuis 2019</h5>
+                <p class="text-muted">Des années d'expérience au service de nos clients</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="bg-serviac text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                    <i class="bi bi-geo-alt fs-2"></i>
+                </div>
+                <h5 class="mt-3">Abidjan, CI</h5>
+                <p class="text-muted">Distribution dans toute la Côte d'Ivoire</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="bg-serviac text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                    <i class="bi bi-people fs-2"></i>
+                </div>
+                <h5 class="mt-3">B2B & B2C</h5>
+                <p class="text-muted">Professionnels et particuliers</p>
+            </div>
+        </div>
+        
+        <div class="text-center mt-5">
+            <a href="{% url 'website:contact' %}" class="btn btn-serviac btn-lg">
+                <i class="bi bi-envelope me-2"></i>Nous contacter
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

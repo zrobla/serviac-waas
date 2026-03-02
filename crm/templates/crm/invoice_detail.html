@@ -1,0 +1,204 @@
+{% extends 'crm/base_crm.html' %}
+
+{% block page_title %}Facture {{ invoice.number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-receipt me-2"></i>{{ invoice.number }}
+        {% if invoice.status == 'DRAFT' %}
+        <span class="badge bg-secondary ms-2">Brouillon</span>
+        {% elif invoice.status == 'SENT' %}
+        <span class="badge bg-info ms-2">Envoyée</span>
+        {% elif invoice.status == 'PAID' %}
+        <span class="badge bg-success ms-2">Payée</span>
+        {% elif invoice.status == 'CANCELLED' %}
+        <span class="badge bg-danger ms-2">Annulée</span>
+        {% endif %}
+        {% if invoice.is_overdue %}
+        <span class="badge bg-danger ms-2">En retard</span>
+        {% endif %}
+    </h2>
+    <div class="btn-group">
+        <a href="{% url 'crm:invoice_pdf' invoice.pk %}" class="btn btn-outline-primary" target="_blank">
+            <i class="bi bi-file-pdf me-1"></i>PDF
+        </a>
+        {% if invoice.status == 'DRAFT' %}
+        <button type="button" class="btn btn-success" onclick="alert('Envoi email à implémenter')">
+            <i class="bi bi-envelope me-1"></i>Envoyer
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- En-tête facture -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">SERVIAC GROUP SUARL</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1">Production et distribution d'alimentation animale</p>
+                <p class="mb-1">Abidjan, Côte d'Ivoire</p>
+                <p class="mb-1"><i class="bi bi-telephone me-1"></i>+225 XX XX XX XX XX</p>
+                <p class="mb-0"><i class="bi bi-envelope me-1"></i>contact@serviac-group.com</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i>Facturer à</h5>
+            </div>
+            <div class="card-body">
+                <h5>{{ invoice.customer.name }}</h5>
+                {% if invoice.customer.customer_type == 'B2B' %}
+                <span class="badge bg-primary mb-2">Professionnel</span>
+                {% endif %}
+                {% if invoice.customer.address %}
+                <p class="mb-1">{{ invoice.customer.address }}</p>
+                {% endif %}
+                <p class="mb-1"><i class="bi bi-telephone me-1"></i>{{ invoice.customer.phone }}</p>
+                {% if invoice.customer.email %}
+                <p class="mb-0"><i class="bi bi-envelope me-1"></i>{{ invoice.customer.email }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informations facture -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <small class="text-muted d-block">N° Facture</small>
+                <strong>{{ invoice.number }}</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">Date d'émission</small>
+                <strong>{{ invoice.created_at|date:"d/m/Y" }}</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">Échéance</small>
+                <strong {% if invoice.is_overdue %}class="text-danger"{% endif %}>
+                    {{ invoice.due_date|date:"d/m/Y"|default:"À réception" }}
+                </strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">Commande</small>
+                {% if invoice.order %}
+                <a href="{% url 'crm:order_detail' invoice.order.pk %}">
+                    <strong>{{ invoice.order.number }}</strong>
+                </a>
+                {% else %}
+                <strong>-</strong>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lignes de facture -->
+<div class="card mb-4">
+    <div class="table-responsive">
+        <table class="table table-striped mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Description</th>
+                    <th class="text-center">Quantité</th>
+                    <th class="text-end">Prix unitaire</th>
+                    <th class="text-end">Total HT</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items.all %}
+                <tr>
+                    <td>
+                        <strong>{{ item.description }}</strong>
+                        {% if item.product %}
+                        <br><small class="text-muted">Réf: {{ item.product.code }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-end">{{ item.unit_price|floatformat:0 }} FCFA</td>
+                    <td class="text-end">{{ item.line_total|floatformat:0 }} FCFA</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        Aucune ligne
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Totaux -->
+    <div class="card-footer">
+        <div class="row justify-content-end">
+            <div class="col-md-4">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td>Sous-total HT:</td>
+                        <td class="text-end">{{ invoice.subtotal|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr>
+                        <td>TVA (18%):</td>
+                        <td class="text-end">{{ invoice.tax_amount|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="border-top">
+                        <td class="fs-5"><strong>Total TTC:</strong></td>
+                        <td class="text-end fs-5"><strong class="text-primary">{{ invoice.total|floatformat:0 }} FCFA</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Montant payé:</td>
+                        <td class="text-end text-success">{{ invoice.amount_paid|floatformat:0 }} FCFA</td>
+                    </tr>
+                    {% if invoice.amount_due > 0 %}
+                    <tr class="border-top">
+                        <td><strong>Reste à payer:</strong></td>
+                        <td class="text-end text-danger"><strong>{{ invoice.amount_due|floatformat:0 }} FCFA</strong></td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notes -->
+{% if invoice.notes %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0">Notes</h6>
+    </div>
+    <div class="card-body">
+        {{ invoice.notes|linebreaks }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Conditions de paiement -->
+<div class="card border-warning mb-4">
+    <div class="card-body bg-warning bg-opacity-10">
+        <h6><i class="bi bi-info-circle me-1"></i>Conditions de paiement</h6>
+        <p class="mb-0">
+            Merci de régler cette facture avant la date d'échéance indiquée.
+            Modes de paiement acceptés: Espèces, Mobile Money (Orange Money, MTN, Moov), Virement bancaire, Chèque.
+        </p>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between mt-4">
+    <a href="{% url 'crm:invoice_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour aux factures
+    </a>
+    <a href="{% url 'crm:invoice_pdf' invoice.pk %}" class="btn btn-primary" target="_blank">
+        <i class="bi bi-download me-1"></i>Télécharger PDF
+    </a>
+</div>
+{% endblock %}

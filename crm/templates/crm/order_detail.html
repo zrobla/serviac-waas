@@ -1,0 +1,234 @@
+{% extends 'crm/base_crm.html' %}
+
+{% block page_title %}Commande {{ order.number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-cart3 me-2"></i>Commande {{ order.number }}
+        {% if order.status == 'DRAFT' %}
+        <span class="badge bg-secondary ms-2">Brouillon</span>
+        {% elif order.status == 'CONFIRMED' %}
+        <span class="badge bg-info ms-2">Confirmée</span>
+        {% elif order.status == 'DELIVERED' %}
+        <span class="badge bg-success ms-2">Livrée</span>
+        {% elif order.status == 'INVOICED' %}
+        <span class="badge bg-primary ms-2">Facturée</span>
+        {% elif order.status == 'CANCELLED' %}
+        <span class="badge bg-danger ms-2">Annulée</span>
+        {% endif %}
+    </h2>
+    <div class="btn-group">
+        {% if order.status == 'DRAFT' %}
+        <a href="{% url 'crm:order_update' order.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i>Modifier
+        </a>
+        <form method="post" action="{% url 'crm:order_confirm' order.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-lg me-1"></i>Confirmer
+            </button>
+        </form>
+        {% endif %}
+        {% if order.status in 'CONFIRMED,DELIVERED' %}
+        <form method="post" action="{% url 'crm:order_invoice' order.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-receipt me-1"></i>Facturer
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Informations client -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i>Client</h5>
+            </div>
+            <div class="card-body">
+                <h5>
+                    <a href="{% url 'crm:customer_detail' order.customer.pk %}">
+                        {{ order.customer.name }}
+                    </a>
+                    {% if order.customer.customer_type == 'B2B' %}
+                    <span class="badge bg-primary">Professionnel</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Particulier</span>
+                    {% endif %}
+                </h5>
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" width="40%">Téléphone:</td>
+                        <td>{{ order.customer.phone }}</td>
+                    </tr>
+                    {% if order.customer.email %}
+                    <tr>
+                        <td class="text-muted">Email:</td>
+                        <td>{{ order.customer.email }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Solde client:</td>
+                        <td>
+                            {% if order.customer.balance > 0 %}
+                            <span class="text-danger fw-bold">{{ order.customer.balance|floatformat:0 }} FCFA</span>
+                            {% else %}
+                            <span class="text-success">{{ order.customer.balance|floatformat:0 }} FCFA</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Plafond crédit:</td>
+                        <td>{{ order.customer.credit_limit|floatformat:0 }} FCFA</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Informations commande -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Détails commande</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" width="40%">Créée le:</td>
+                        <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Par:</td>
+                        <td>{{ order.created_by|default:"Système" }}</td>
+                    </tr>
+                    {% if order.delivery_date %}
+                    <tr>
+                        <td class="text-muted">Livraison souhaitée:</td>
+                        <td>{{ order.delivery_date|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if order.delivery_address %}
+                    <tr>
+                        <td class="text-muted">Adresse livraison:</td>
+                        <td>{{ order.delivery_address }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Paiement:</td>
+                        <td>
+                            {% if order.payment_status == 'UNPAID' %}
+                            <span class="badge bg-warning text-dark">Non payée</span>
+                            {% elif order.payment_status == 'PARTIAL' %}
+                            <span class="badge bg-info">Paiement partiel</span>
+                            {% elif order.payment_status == 'PAID' %}
+                            <span class="badge bg-success">Payée</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if order.source_inbox %}
+                    <tr>
+                        <td class="text-muted">Source:</td>
+                        <td>
+                            <a href="{% url 'crm:inbox_detail' order.source_inbox.pk %}">
+                                Demande #{{ order.source_inbox.pk }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+                {% if order.customer_notes %}
+                <hr>
+                <p class="mb-0 text-muted small">
+                    <strong>Notes:</strong> {{ order.customer_notes }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lignes de commande -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Produits commandés</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produit</th>
+                            <th class="text-center">Qté</th>
+                            <th class="text-end">Prix U.</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr>
+                            <td>
+                                {{ item.product.name }}
+                                <br><small class="text-muted">{{ item.product.code }}</small>
+                            </td>
+                            <td class="text-center">{{ item.quantity }} {{ item.product.get_unit_display }}</td>
+                            <td class="text-end">{{ item.unit_price|floatformat:0 }}</td>
+                            <td class="text-end fw-bold">{{ item.line_total|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                Aucun produit
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between">
+                    <span>Sous-total HT:</span>
+                    <span>{{ order.subtotal|floatformat:0 }} FCFA</span>
+                </div>
+                <div class="d-flex justify-content-between text-muted">
+                    <span>TVA (18%):</span>
+                    <span>{{ order.tax_amount|floatformat:0 }} FCFA</span>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between fs-5">
+                    <span class="fw-bold">Total TTC:</span>
+                    <span class="fw-bold text-primary">{{ order.total|floatformat:0 }} FCFA</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Factures liées -->
+        {% if order.invoices.exists %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Factures associées</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for invoice in order.invoices.all %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'crm:invoice_detail' invoice.pk %}">{{ invoice.number }}</a>
+                        <small class="text-muted ms-2">{{ invoice.created_at|date:"d/m/Y" }}</small>
+                    </div>
+                    <span class="badge bg-{% if invoice.status == 'PAID' %}success{% elif invoice.status == 'SENT' %}info{% else %}secondary{% endif %}">
+                        {{ invoice.get_status_display }}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'crm:order_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour aux commandes
+    </a>
+</div>
+{% endblock %}

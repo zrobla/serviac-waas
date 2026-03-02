@@ -1,0 +1,94 @@
+{% extends 'base_website.html' %}
+
+{% block title %}SERVIAC GROUP - Alimentation Animale de Qualité{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center">
+    <div class="container">
+        <h1 class="display-4 fw-bold mb-3">SERVIAC GROUP</h1>
+        <p class="lead mb-4">Production et distribution d'alimentation animale de qualité supérieure</p>
+        <p class="mb-4">Farine de Poisson - Fish Meal - Origine Sénégal</p>
+        <a href="{% url 'website:order_form' %}" class="btn btn-warning btn-lg fw-bold px-5">
+            <i class="bi bi-cart-plus me-2"></i>Commander maintenant
+        </a>
+    </div>
+</section>
+
+<!-- Produits phares -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5 text-serviac">Nos Produits</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-box-seam display-3 text-serviac mb-3"></i>
+                        <h5 class="card-title">Farine de Poisson</h5>
+                        <p class="card-text">Fish Meal haute qualité - Sacs de 50kg</p>
+                        <p class="fw-bold text-serviac">Origine: Océan Atlantique</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-award display-3 text-serviac mb-3"></i>
+                        <h5 class="card-title">Qualité Premium</h5>
+                        <p class="card-text">Produits transformés au Sénégal selon les normes internationales</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-truck display-3 text-serviac mb-3"></i>
+                        <h5 class="card-title">Livraison</h5>
+                        <p class="card-text">Distribution dans toute la Côte d'Ivoire</p>
+                        <p class="small text-muted">B2B et B2C</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pourquoi nous choisir -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5 text-serviac">Pourquoi choisir SERVIAC ?</h2>
+        <div class="row g-4">
+            <div class="col-md-3 text-center">
+                <i class="bi bi-check-circle-fill display-4 text-serviac mb-3"></i>
+                <h6>Qualité garantie</h6>
+            </div>
+            <div class="col-md-3 text-center">
+                <i class="bi bi-clock-fill display-4 text-serviac mb-3"></i>
+                <h6>Livraison rapide</h6>
+            </div>
+            <div class="col-md-3 text-center">
+                <i class="bi bi-cash-stack display-4 text-serviac mb-3"></i>
+                <h6>Paiement flexible</h6>
+            </div>
+            <div class="col-md-3 text-center">
+                <i class="bi bi-headset display-4 text-serviac mb-3"></i>
+                <h6>Support client</h6>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5 bg-serviac text-white text-center">
+    <div class="container">
+        <h3 class="mb-3">Prêt à commander ?</h3>
+        <p class="mb-4">Passez votre commande en ligne ou contactez-nous</p>
+        <a href="{% url 'website:order_form' %}" class="btn btn-warning btn-lg me-2">
+            <i class="bi bi-cart-plus me-1"></i>Commander
+        </a>
+        <a href="{% url 'website:contact' %}" class="btn btn-outline-light btn-lg">
+            <i class="bi bi-telephone me-1"></i>Nous contacter
+        </a>
+    </div>
+</section>
+{% endblock %}

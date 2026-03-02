@@ -1,0 +1,101 @@
+{% extends 'base_crm.html' %}
+
+{% block title %}{% if object %}Modifier{% else %}Nouveau{% endif %} Client{% endblock %}
+{% block page_title %}{% if object %}Modifier le client{% else %}Nouveau client{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <h6 class="text-muted mb-3"><i class="bi bi-person me-2"></i>Informations générales</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            <label class="form-label">Nom / Raison sociale *</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Type *</label>
+                            {{ form.customer_type }}
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-muted mb-3"><i class="bi bi-telephone me-2"></i>Contact</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Téléphone principal *</label>
+                            {{ form.phone }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Téléphone secondaire</label>
+                            {{ form.phone_secondary }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ville</label>
+                            {{ form.city }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Adresse</label>
+                            {{ form.address }}
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-muted mb-3"><i class="bi bi-building me-2"></i>Informations entreprise (B2B)</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">N° RCCM</label>
+                            {{ form.company_registration }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">N° Contribuable</label>
+                            {{ form.tax_id }}
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-muted mb-3"><i class="bi bi-cash me-2"></i>Conditions financières</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Plafond de crédit (FCFA)</label>
+                            {{ form.credit_limit }}
+                            <small class="text-muted">0 = pas de crédit</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Délai de paiement (jours)</label>
+                            {{ form.payment_terms }}
+                            <small class="text-muted">0 = comptant</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Note manuelle (1-10)</label>
+                            {{ form.manual_score }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Notes internes</label>
+                        {{ form.notes }}
+                    </div>
+                    
+                    <div class="form-check mb-4">
+                        {{ form.is_active }}
+                        <label class="form-check-label">Client actif</label>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-serviac">
+                            <i class="bi bi-check-lg me-1"></i>Enregistrer
+                        </button>
+                        <a href="{% url 'crm:customer_list' %}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

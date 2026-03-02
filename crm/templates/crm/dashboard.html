@@ -1,0 +1,202 @@
+{% extends 'base_crm.html' %}
+
+{% block title %}Tableau de bord{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Nouvelles demandes</h6>
+                        <h3 class="mb-0">{{ new_orders_count|default:0 }}</h3>
+                    </div>
+                    <div class="text-serviac">
+                        <i class="bi bi-inbox-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Clients actifs</h6>
+                        <h3 class="mb-0">{{ customers_count|default:0 }}</h3>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-people-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Commandes en cours</h6>
+                        <h3 class="mb-0">{{ orders_in_progress|default:0 }}</h3>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-cart-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Factures impayées</h6>
+                        <h3 class="mb-0">{{ unpaid_invoices|default:0 }}</h3>
+                    </div>
+                    <div class="text-danger">
+                        <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Actions rapides</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'crm:inbox_list' %}" class="btn btn-outline-primary w-100 py-3">
+                            <i class="bi bi-inbox-fill d-block fs-3 mb-1"></i>
+                            Inbox
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'crm:order_create' %}" class="btn btn-outline-success w-100 py-3">
+                            <i class="bi bi-cart-plus d-block fs-3 mb-1"></i>
+                            Nouvelle commande
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'crm:customer_create' %}" class="btn btn-outline-info w-100 py-3">
+                            <i class="bi bi-person-plus d-block fs-3 mb-1"></i>
+                            Nouveau client
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'crm:invoice_list' %}" class="btn btn-outline-warning w-100 py-3">
+                            <i class="bi bi-receipt d-block fs-3 mb-1"></i>
+                            Factures
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dernières commandes -->
+        <div class="card mt-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Dernières commandes</h5>
+                <a href="{% url 'crm:order_list' %}" class="btn btn-sm btn-outline-primary">Voir tout</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>N° Commande</th>
+                            <th>Client</th>
+                            <th>Statut</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'crm:order_detail' order.pk %}">{{ order.number }}</a>
+                            </td>
+                            <td>{{ order.customer.name }}</td>
+                            <td>
+                                {% if order.status == 'DRAFT' %}
+                                <span class="badge bg-secondary">Brouillon</span>
+                                {% elif order.status == 'CONFIRMED' %}
+                                <span class="badge bg-info">Confirmée</span>
+                                {% elif order.status == 'DELIVERED' %}
+                                <span class="badge bg-success">Livrée</span>
+                                {% elif order.status == 'INVOICED' %}
+                                <span class="badge bg-primary">Facturée</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">{{ order.total|floatformat:0 }} FCFA</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                Aucune commande récente
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Notifications</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_notifications %}
+                <ul class="list-group list-group-flush">
+                    {% for notif in recent_notifications %}
+                    <li class="list-group-item px-0">
+                        <small class="text-muted">{{ notif.created_at|timesince }}</small>
+                        <p class="mb-0">{{ notif.title }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-4">
+                    <i class="bi bi-bell-slash d-block fs-1 mb-2"></i>
+                    Aucune notification
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Stats financières -->
+        <div class="card mt-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Ce mois</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Chiffre d'affaires</small>
+                    <h4 class="mb-0 text-success">{{ monthly_revenue|floatformat:0|default:0 }} FCFA</h4>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">Commandes</small>
+                    <h5 class="mb-0">{{ monthly_orders|default:0 }}</h5>
+                </div>
+                <div>
+                    <small class="text-muted">Créances clients</small>
+                    <h5 class="mb-0 text-warning">{{ total_receivables|floatformat:0|default:0 }} FCFA</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

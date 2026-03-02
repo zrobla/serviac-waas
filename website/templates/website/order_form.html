@@ -1,0 +1,328 @@
+{% extends 'base_website.html' %}
+
+{% block title %}Commander - SERVIAC GROUP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-form-container { max-width: 900px; margin: 0 auto; }
+    .product-card { cursor: pointer; transition: all 0.2s; }
+    .product-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .product-card.selected { border-color: var(--serviac-primary); border-width: 2px; }
+    .quantity-control { width: 120px; }
+    .cart-item { background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem; }
+    .step-indicator { display: flex; justify-content: center; margin-bottom: 2rem; }
+    .step { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; background: #e9ecef; margin: 0 1rem; font-weight: bold; }
+    .step.active { background: var(--serviac-primary); color: white; }
+    .step.completed { background: #28a745; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container order-form-container">
+        <div class="text-center mb-4">
+            <h1 class="text-serviac"><i class="bi bi-cart-plus me-2"></i>Commander</h1>
+            <p class="text-muted">Passez votre commande en ligne - Livraison dans toute la Côte d'Ivoire</p>
+        </div>
+        
+        <!-- Steps indicator -->
+        <div class="step-indicator">
+            <div class="step active" data-step="1">1</div>
+            <div class="step" data-step="2">2</div>
+            <div class="step" data-step="3">3</div>
+        </div>
+        
+        <form id="order-form" method="post">
+            {% csrf_token %}
+            
+            <!-- Step 1: Informations client -->
+            <div class="card shadow mb-4" id="step-1">
+                <div class="card-header bg-serviac text-white">
+                    <h5 class="mb-0"><i class="bi bi-person me-2"></i>Étape 1 : Vos informations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nom complet / Entreprise *</label>
+                            <input type="text" name="client_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Type de client *</label>
+                            <select name="client_type" class="form-select" id="client-type">
+                                <option value="B2C">Particulier</option>
+                                <option value="B2B">Professionnel (Entreprise)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Téléphone *</label>
+                            <input type="tel" name="phone" class="form-control" placeholder="+225" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Adresse de livraison *</label>
+                            <textarea name="address" class="form-control" rows="2" required></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ville *</label>
+                            <input type="text" name="city" class="form-control" value="Abidjan" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 2: Produits -->
+            <div class="card shadow mb-4" id="step-2">
+                <div class="card-header bg-serviac text-white">
+                    <h5 class="mb-0"><i class="bi bi-box me-2"></i>Étape 2 : Vos produits</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3" id="products-list">
+                        <!-- Produit principal -->
+                        <div class="col-md-6">
+                            <div class="card product-card h-100" data-product-id="1">
+                                <div class="card-body">
+                                    <h6 class="card-title">Farine de Poisson - Sac 50kg</h6>
+                                    <p class="card-text small text-muted">Fish Meal Premium - Origine Sénégal</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="price-display fw-bold text-serviac" data-b2b="45000" data-b2c="50000">50 000 FCFA</span>
+                                        <div class="input-group quantity-control">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm qty-minus">-</button>
+                                            <input type="number" name="qty_1" class="form-control form-control-sm text-center qty-input" value="0" min="0">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm qty-plus">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Récapitulatif -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Sous-total :</span>
+                            <span class="fw-bold fs-4 text-serviac" id="subtotal">0 FCFA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Paiement -->
+            <div class="card shadow mb-4" id="step-3">
+                <div class="card-header bg-serviac text-white">
+                    <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Étape 3 : Paiement</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Mode de paiement souhaité *</label>
+                            <select name="payment_preference" class="form-select" required>
+                                <option value="cash">Espèces à la livraison</option>
+                                <option value="mobile_money">Mobile Money (Orange/MTN/Wave)</option>
+                                <option value="credit">Crédit (clients approuvés)</option>
+                                <option value="transfer">Virement bancaire</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes / Instructions particulières</label>
+                            <textarea name="notes" class="form-control" rows="3" 
+                                      placeholder="Précisions sur la livraison, horaires préférés..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Récapitulatif final -->
+            <div class="card shadow border-success mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Récapitulatif de votre commande</h5>
+                </div>
+                <div class="card-body">
+                    <div id="order-summary">
+                        <p class="text-muted text-center">Ajoutez des produits pour voir le récapitulatif</p>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center fs-5">
+                        <span>Total à payer :</span>
+                        <span class="fw-bold text-success" id="total">0 FCFA</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submit -->
+            <div class="text-center">
+                <button type="submit" class="btn btn-serviac btn-lg px-5" id="submit-btn">
+                    <i class="bi bi-send me-2"></i>Envoyer ma commande
+                </button>
+                <p class="small text-muted mt-2">
+                    Vous recevrez une confirmation par téléphone ou email
+                </p>
+            </div>
+        </form>
+        
+        <!-- Success message (hidden) -->
+        <div class="alert alert-success d-none" id="success-message">
+            <h4><i class="bi bi-check-circle me-2"></i>Commande envoyée !</h4>
+            <p>Votre commande a été reçue avec succès. Notre équipe vous contactera très bientôt pour confirmation.</p>
+            <a href="{% url 'website:home' %}" class="btn btn-success">Retour à l'accueil</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('order-form');
+    const clientType = document.getElementById('client-type');
+    const subtotalEl = document.getElementById('subtotal');
+    const totalEl = document.getElementById('total');
+    const summaryEl = document.getElementById('order-summary');
+    
+    // Prix selon type client
+    function updatePrices() {
+        const isB2B = clientType.value === 'B2B';
+        document.querySelectorAll('.price-display').forEach(el => {
+            const price = isB2B ? el.dataset.b2b : el.dataset.b2c;
+            el.textContent = formatPrice(price) + ' FCFA';
+            el.dataset.currentPrice = price;
+        });
+        calculateTotal();
+    }
+    
+    // Formater prix
+    function formatPrice(price) {
+        return parseInt(price).toLocaleString('fr-FR');
+    }
+    
+    // Calculer total
+    function calculateTotal() {
+        let total = 0;
+        let items = [];
+        
+        document.querySelectorAll('.qty-input').forEach(input => {
+            const qty = parseInt(input.value) || 0;
+            if (qty > 0) {
+                const card = input.closest('.product-card');
+                const priceEl = card.querySelector('.price-display');
+                const price = parseInt(priceEl.dataset.currentPrice || priceEl.dataset.b2c);
+                const productName = card.querySelector('.card-title').textContent;
+                
+                total += qty * price;
+                items.push({ name: productName, qty: qty, price: price, subtotal: qty * price });
+            }
+        });
+        
+        subtotalEl.textContent = formatPrice(total) + ' FCFA';
+        totalEl.textContent = formatPrice(total) + ' FCFA';
+        
+        // Update summary
+        if (items.length > 0) {
+            let html = '<ul class="list-unstyled mb-0">';
+            items.forEach(item => {
+                html += `<li class="d-flex justify-content-between py-1">
+                    <span>${item.qty}x ${item.name}</span>
+                    <span class="fw-bold">${formatPrice(item.subtotal)} FCFA</span>
+                </li>`;
+            });
+            html += '</ul>';
+            summaryEl.innerHTML = html;
+        } else {
+            summaryEl.innerHTML = '<p class="text-muted text-center mb-0">Ajoutez des produits</p>';
+        }
+    }
+    
+    // Event listeners
+    clientType.addEventListener('change', updatePrices);
+    
+    // Quantity controls
+    document.querySelectorAll('.qty-plus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.parentNode.querySelector('.qty-input');
+            input.value = parseInt(input.value) + 1;
+            calculateTotal();
+        });
+    });
+    
+    document.querySelectorAll('.qty-minus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.parentNode.querySelector('.qty-input');
+            if (parseInt(input.value) > 0) {
+                input.value = parseInt(input.value) - 1;
+                calculateTotal();
+            }
+        });
+    });
+    
+    document.querySelectorAll('.qty-input').forEach(input => {
+        input.addEventListener('change', calculateTotal);
+    });
+    
+    // Form submit
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const items = [];
+        
+        document.querySelectorAll('.qty-input').forEach(input => {
+            const qty = parseInt(input.value) || 0;
+            if (qty > 0) {
+                const card = input.closest('.product-card');
+                const priceEl = card.querySelector('.price-display');
+                items.push({
+                    product_id: card.dataset.productId,
+                    quantity: qty,
+                    unit_price: parseInt(priceEl.dataset.currentPrice || priceEl.dataset.b2c)
+                });
+            }
+        });
+        
+        if (items.length === 0) {
+            alert('Veuillez sélectionner au moins un produit');
+            return;
+        }
+        
+        const data = {
+            prospect_name: formData.get('client_name'),
+            prospect_type: formData.get('client_type'),
+            prospect_phone: formData.get('phone'),
+            prospect_email: formData.get('email') || '',
+            prospect_address: formData.get('address'),
+            delivery_address: formData.get('address') + ', ' + formData.get('city'),
+            payment_preference: formData.get('payment_preference'),
+            notes: formData.get('notes') || '',
+            items: items,
+            total_requested: parseInt(totalEl.textContent.replace(/[^\d]/g, ''))
+        };
+        
+        try {
+            const response = await fetch('/api/v1/public/order/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                form.classList.add('d-none');
+                document.getElementById('success-message').classList.remove('d-none');
+                window.scrollTo(0, 0);
+            } else {
+                alert('Erreur lors de l\'envoi. Veuillez réessayer ou nous contacter par téléphone.');
+            }
+        } catch (error) {
+            alert('Erreur de connexion. Veuillez réessayer.');
+        }
+    });
+    
+    // Init
+    updatePrices();
+});
+</script>
+{% endblock %}

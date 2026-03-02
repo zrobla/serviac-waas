@@ -1,0 +1,64 @@
+{% extends 'base_crm.html' %}
+{% load humanize %}
+
+{% block title %}{{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-box me-2"></i>Détails du produit</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Code :</strong> {{ product.code }}</p>
+                        <p><strong>Catégorie :</strong> {{ product.category.name }}</p>
+                        <p><strong>Unité :</strong> {{ product.get_unit_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Prix B2B :</strong> {{ product.price_b2b|floatformat:0|intcomma }} FCFA</p>
+                        <p><strong>Prix B2C :</strong> {{ product.price_b2c|floatformat:0|intcomma }} FCFA</p>
+                    </div>
+                </div>
+                {% if product.description %}
+                <hr>
+                <p>{{ product.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-4 {% if product.is_low_stock %}border-danger{% endif %}">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-boxes me-2"></i>État du stock</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="display-4 {% if product.is_low_stock %}text-danger{% else %}text-serviac{% endif %}">
+                    {{ product.stock_quantity|floatformat:0 }}
+                </div>
+                <p class="text-muted mb-2">{{ product.get_unit_display }}</p>
+                {% if product.is_low_stock %}
+                    <span class="badge bg-danger">Stock bas (seuil: {{ product.alert_threshold|floatformat:0 }})</span>
+                {% else %}
+                    <span class="badge bg-success">Stock OK</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'crm:product_update' product.pk %}" class="btn btn-serviac">
+                    <i class="bi bi-pencil me-1"></i>Modifier
+                </a>
+                <a href="{% url 'crm:product_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

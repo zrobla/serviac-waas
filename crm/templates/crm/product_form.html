@@ -1,0 +1,86 @@
+{% extends 'base_crm.html' %}
+
+{% block title %}{% if object %}Modifier{% else %}Nouveau{% endif %} Produit{% endblock %}
+{% block page_title %}{% if object %}Modifier le produit{% else %}Nouveau produit{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <h6 class="text-muted mb-3"><i class="bi bi-box me-2"></i>Informations produit</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Code produit *</label>
+                            {{ form.code }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Nom *</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Catégorie *</label>
+                            {{ form.category }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Unité *</label>
+                            {{ form.unit }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            {{ form.description }}
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-muted mb-3"><i class="bi bi-currency-exchange me-2"></i>Tarification</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Prix B2B (FCFA) *</label>
+                            {{ form.price_b2b }}
+                            <small class="text-muted">Prix pour les professionnels</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Prix B2C (FCFA) *</label>
+                            {{ form.price_b2c }}
+                            <small class="text-muted">Prix pour les particuliers</small>
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-muted mb-3"><i class="bi bi-boxes me-2"></i>Stock</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Quantité en stock</label>
+                            {{ form.stock_quantity }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Seuil d'alerte</label>
+                            {{ form.alert_threshold }}
+                            <small class="text-muted">Alerte si stock inférieur</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Image</label>
+                        {{ form.image }}
+                    </div>
+                    
+                    <div class="form-check mb-4">
+                        {{ form.is_active }}
+                        <label class="form-check-label">Produit actif</label>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-serviac">
+                            <i class="bi bi-check-lg me-1"></i>Enregistrer
+                        </button>
+                        <a href="{% url 'crm:product_list' %}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture {{ invoice.number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+        
+        .invoice-container {
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* En-tête */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #0056b3;
+        }
+        
+        .company-info h1 {
+            color: #0056b3;
+            font-size: 24pt;
+            margin-bottom: 5px;
+        }
+        
+        .company-info p {
+            color: #666;
+            margin-bottom: 2px;
+        }
+        
+        .invoice-title {
+            text-align: right;
+        }
+        
+        .invoice-title h2 {
+            font-size: 28pt;
+            color: #0056b3;
+            margin-bottom: 10px;
+        }
+        
+        .invoice-number {
+            font-size: 14pt;
+            font-weight: bold;
+        }
+        
+        /* Client et infos */
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .client-box, .invoice-details {
+            width: 48%;
+        }
+        
+        .box-title {
+            background: #0056b3;
+            color: white;
+            padding: 8px 15px;
+            font-size: 10pt;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .box-content {
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 15px;
+            min-height: 100px;
+        }
+        
+        .client-name {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .client-type {
+            display: inline-block;
+            background: #0056b3;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 9pt;
+            margin-bottom: 10px;
+        }
+        
+        .details-table {
+            width: 100%;
+        }
+        
+        .details-table td {
+            padding: 5px 0;
+        }
+        
+        .details-table .label {
+            color: #666;
+            width: 50%;
+        }
+        
+        .details-table .value {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .overdue {
+            color: #dc3545;
+        }
+        
+        /* Tableau des produits */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .items-table thead {
+            background: #0056b3;
+            color: white;
+        }
+        
+        .items-table th {
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: normal;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.5px;
+        }
+        
+        .items-table th.right {
+            text-align: right;
+        }
+        
+        .items-table th.center {
+            text-align: center;
+        }
+        
+        .items-table tbody tr {
+            border-bottom: 1px solid #eee;
+        }
+        
+        .items-table tbody tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .items-table td {
+            padding: 12px 10px;
+            vertical-align: top;
+        }
+        
+        .items-table td.right {
+            text-align: right;
+        }
+        
+        .items-table td.center {
+            text-align: center;
+        }
+        
+        .product-code {
+            color: #666;
+            font-size: 9pt;
+        }
+        
+        /* Totaux */
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+        }
+        
+        .totals-box {
+            width: 40%;
+        }
+        
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 8px 10px;
+        }
+        
+        .totals-table .label {
+            text-align: left;
+        }
+        
+        .totals-table .value {
+            text-align: right;
+        }
+        
+        .totals-table tr.subtotal {
+            border-top: 1px solid #ddd;
+        }
+        
+        .totals-table tr.total {
+            background: #0056b3;
+            color: white;
+            font-size: 14pt;
+            font-weight: bold;
+        }
+        
+        .totals-table tr.paid td {
+            color: #28a745;
+        }
+        
+        .totals-table tr.due {
+            background: #dc3545;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Pied de page */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .payment-info {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        .payment-info h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .payment-info p {
+            color: #856404;
+            margin-bottom: 0;
+        }
+        
+        .thank-you {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px 0;
+        }
+        
+        @media print {
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .invoice-container {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="company-info">
+                <h1>SERVIAC GROUP</h1>
+                <p><strong>{{ company.name }}</strong></p>
+                <p>Production et distribution d'alimentation animale</p>
+                <p>{{ company.address }}</p>
+                <p>Tél: {{ company.phone }}</p>
+                <p>Email: {{ company.email }}</p>
+            </div>
+            <div class="invoice-title">
+                <h2>FACTURE</h2>
+                <p class="invoice-number">{{ invoice.number }}</p>
+            </div>
+        </div>
+        
+        <!-- Client et détails -->
+        <div class="info-section">
+            <div class="client-box">
+                <div class="box-title">Facturer à</div>
+                <div class="box-content">
+                    <div class="client-name">{{ invoice.customer.name }}</div>
+                    {% if invoice.customer.customer_type == 'B2B' %}
+                    <span class="client-type">Professionnel</span>
+                    {% endif %}
+                    {% if invoice.customer.address %}
+                    <p>{{ invoice.customer.address }}</p>
+                    {% endif %}
+                    <p>Tél: {{ invoice.customer.phone }}</p>
+                    {% if invoice.customer.email %}
+                    <p>Email: {{ invoice.customer.email }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="invoice-details">
+                <div class="box-title">Détails facture</div>
+                <div class="box-content">
+                    <table class="details-table">
+                        <tr>
+                            <td class="label">N° Facture:</td>
+                            <td class="value">{{ invoice.number }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Date d'émission:</td>
+                            <td class="value">{{ invoice.created_at|date:"d/m/Y" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Date d'échéance:</td>
+                            <td class="value {% if invoice.is_overdue %}overdue{% endif %}">
+                                {{ invoice.due_date|date:"d/m/Y"|default:"À réception" }}
+                            </td>
+                        </tr>
+                        {% if invoice.order %}
+                        <tr>
+                            <td class="label">N° Commande:</td>
+                            <td class="value">{{ invoice.order.number }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tableau des produits -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 50%">Description</th>
+                    <th class="center" style="width: 15%">Quantité</th>
+                    <th class="right" style="width: 17%">Prix unitaire</th>
+                    <th class="right" style="width: 18%">Total HT</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items.all %}
+                <tr>
+                    <td>
+                        {{ item.description }}
+                        {% if item.product %}
+                        <br><span class="product-code">Réf: {{ item.product.code }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="center">{{ item.quantity }}</td>
+                    <td class="right">{{ item.unit_price|floatformat:0 }} FCFA</td>
+                    <td class="right">{{ item.line_total|floatformat:0 }} FCFA</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Totaux -->
+        <div class="totals-section">
+            <div class="totals-box">
+                <table class="totals-table">
+                    <tr>
+                        <td class="label">Sous-total HT:</td>
+                        <td class="value">{{ invoice.subtotal|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr>
+                        <td class="label">TVA (18%):</td>
+                        <td class="value">{{ invoice.tax_amount|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="total">
+                        <td class="label">TOTAL TTC:</td>
+                        <td class="value">{{ invoice.total|floatformat:0 }} FCFA</td>
+                    </tr>
+                    {% if invoice.amount_paid > 0 %}
+                    <tr class="paid">
+                        <td class="label">Montant payé:</td>
+                        <td class="value">{{ invoice.amount_paid|floatformat:0 }} FCFA</td>
+                    </tr>
+                    {% endif %}
+                    {% if invoice.amount_due > 0 and invoice.amount_paid > 0 %}
+                    <tr class="due">
+                        <td class="label">RESTE À PAYER:</td>
+                        <td class="value">{{ invoice.amount_due|floatformat:0 }} FCFA</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="footer">
+            <div class="payment-info">
+                <h4>📋 Conditions de paiement</h4>
+                <p>Merci de régler cette facture avant la date d'échéance indiquée.</p>
+                <p><strong>Modes de paiement acceptés:</strong> Espèces, Mobile Money (Orange Money, MTN, Moov), Virement bancaire, Chèque.</p>
+            </div>
+            
+            <p class="thank-you">
+                Merci pour votre confiance ! – SERVIAC GROUP
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+{% extends 'base_website.html' %}
+
+{% block title %}Contact - SERVIAC GROUP{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <h1 class="text-center mb-5 text-serviac">Contactez-nous</h1>
+        
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-geo-alt-fill display-4 text-serviac mb-3"></i>
+                        <h5>Adresse</h5>
+                        <p class="text-muted">
+                            Abidjan<br>
+                            Côte d'Ivoire
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-telephone-fill display-4 text-serviac mb-3"></i>
+                        <h5>Téléphone</h5>
+                        <p class="text-muted">
+                            +225 XX XX XX XX XX<br>
+                            <small>Du lundi au samedi</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-envelope-fill display-4 text-serviac mb-3"></i>
+                        <h5>Email</h5>
+                        <p class="text-muted">
+                            contact@serviac-group.com<br>
+                            <small>Réponse sous 24h</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow">
+                    <div class="card-header bg-serviac text-white">
+                        <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Envoyez-nous un message</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" id="contact-form">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Nom complet *</label>
+                                    <input type="text" name="name" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Téléphone *</label>
+                                    <input type="tel" name="phone" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" name="email" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sujet</label>
+                                    <select name="subject" class="form-select">
+                                        <option value="info">Demande d'information</option>
+                                        <option value="order">Question sur une commande</option>
+                                        <option value="partnership">Partenariat</option>
+                                        <option value="other">Autre</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Message *</label>
+                                    <textarea name="message" class="form-control" rows="4" required></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-serviac btn-lg">
+                                        <i class="bi bi-send me-2"></i>Envoyer
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-5">
+            <p class="lead">Vous préférez commander directement ?</p>
+            <a href="{% url 'website:order_form' %}" class="btn btn-warning btn-lg">
+                <i class="bi bi-cart-plus me-2"></i>Accéder au formulaire de commande
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

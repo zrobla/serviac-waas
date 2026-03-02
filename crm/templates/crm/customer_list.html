@@ -1,0 +1,72 @@
+{% extends 'base_crm.html' %}
+
+{% block title %}Clients{% endblock %}
+{% block page_title %}
+    Clients
+    <a href="{% url 'crm:customer_create' %}" class="btn btn-serviac btn-sm ms-3">
+        <i class="bi bi-plus-circle me-1"></i>Nouveau client
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Téléphone</th>
+                        <th>Ville</th>
+                        <th>Solde</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td><a href="{% url 'crm:customer_detail' customer.pk %}">{{ customer.name }}</a></td>
+                        <td><span class="badge {% if customer.customer_type == 'B2B' %}bg-primary{% else %}bg-secondary{% endif %}">{{ customer.get_customer_type_display }}</span></td>
+                        <td>{{ customer.phone }}</td>
+                        <td>{{ customer.city }}</td>
+                        <td class="{% if customer.balance > 0 %}text-danger{% elif customer.balance < 0 %}text-success{% endif %}">
+                            {{ customer.balance|floatformat:0 }} FCFA
+                        </td>
+                        <td>
+                            {% if customer.is_blocked %}
+                                <span class="badge bg-danger">Bloqué</span>
+                            {% elif customer.is_active %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'crm:customer_detail' customer.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'crm:customer_update' customer.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-people display-6 d-block mb-2"></i>
+                            Aucun client enregistré
+                            <br>
+                            <a href="{% url 'crm:customer_create' %}" class="btn btn-serviac mt-2">
+                                <i class="bi bi-plus-circle me-1"></i>Ajouter un client
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

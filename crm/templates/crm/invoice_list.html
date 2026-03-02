@@ -1,0 +1,134 @@
+{% extends 'crm/base_crm.html' %}
+
+{% block page_title %}Factures{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-receipt me-2"></i>Factures</h2>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <label class="col-form-label">Statut:</label>
+            </div>
+            <div class="col-auto">
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Toutes</option>
+                    <option value="DRAFT" {% if request.GET.status == 'DRAFT' %}selected{% endif %}>Brouillon</option>
+                    <option value="SENT" {% if request.GET.status == 'SENT' %}selected{% endif %}>Envoyée</option>
+                    <option value="PAID" {% if request.GET.status == 'PAID' %}selected{% endif %}>Payée</option>
+                    <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Annulée</option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>N° Facture</th>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Commande</th>
+                    <th>Échéance</th>
+                    <th class="text-end">Total</th>
+                    <th>Statut</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td>
+                        <a href="{% url 'crm:invoice_detail' invoice.pk %}" class="fw-bold text-decoration-none">
+                            {{ invoice.number }}
+                        </a>
+                    </td>
+                    <td>{{ invoice.created_at|date:"d/m/Y" }}</td>
+                    <td>
+                        <a href="{% url 'crm:customer_detail' invoice.customer.pk %}">
+                            {{ invoice.customer.name }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if invoice.order %}
+                        <a href="{% url 'crm:order_detail' invoice.order.pk %}">
+                            {{ invoice.order.number }}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if invoice.due_date %}
+                            {{ invoice.due_date|date:"d/m/Y" }}
+                            {% if invoice.is_overdue %}
+                            <span class="badge bg-danger ms-1">En retard</span>
+                            {% endif %}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-bold">{{ invoice.total|floatformat:0 }} FCFA</td>
+                    <td>
+                        {% if invoice.status == 'DRAFT' %}
+                        <span class="badge bg-secondary">Brouillon</span>
+                        {% elif invoice.status == 'SENT' %}
+                        <span class="badge bg-info">Envoyée</span>
+                        {% elif invoice.status == 'PAID' %}
+                        <span class="badge bg-success">Payée</span>
+                        {% elif invoice.status == 'CANCELLED' %}
+                        <span class="badge bg-danger">Annulée</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'crm:invoice_detail' invoice.pk %}" class="btn btn-outline-primary" title="Voir">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'crm:invoice_pdf' invoice.pk %}" class="btn btn-outline-secondary" title="PDF" target="_blank">
+                                <i class="bi bi-file-pdf"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <i class="bi bi-receipt-cutoff fs-1 d-block mb-2"></i>
+                        Aucune facture
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Précédent</a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

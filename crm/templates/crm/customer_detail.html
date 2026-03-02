@@ -1,0 +1,124 @@
+{% extends 'base_crm.html' %}
+{% load humanize %}
+
+{% block title %}{{ customer.name }}{% endblock %}
+{% block page_title %}
+    {{ customer.name }}
+    <span class="badge {% if customer.customer_type == 'B2B' %}bg-primary{% else %}bg-secondary{% endif %} ms-2">
+        {{ customer.get_customer_type_display }}
+    </span>
+    {% if customer.is_blocked %}
+        <span class="badge bg-danger ms-1">Bloqué</span>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Infos générales -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-person me-2"></i>Informations client</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Téléphone :</strong> {{ customer.phone }}</p>
+                        {% if customer.phone_secondary %}
+                        <p><strong>Tél. secondaire :</strong> {{ customer.phone_secondary }}</p>
+                        {% endif %}
+                        {% if customer.email %}
+                        <p><strong>Email :</strong> {{ customer.email }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Ville :</strong> {{ customer.city }}</p>
+                        {% if customer.address %}
+                        <p><strong>Adresse :</strong> {{ customer.address }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if customer.customer_type == 'B2B' %}
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>N° RCCM :</strong> {{ customer.company_registration|default:"-" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>N° Contribuable :</strong> {{ customer.tax_id|default:"-" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Commandes récentes -->
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-cart me-2"></i>Commandes récentes</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center py-3">Module commandes à venir</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Situation financière -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-wallet me-2"></i>Situation financière</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Solde actuel :</span>
+                    <span class="fw-bold {% if customer.balance > 0 %}text-danger{% elif customer.balance < 0 %}text-success{% endif %}">
+                        {{ customer.balance|floatformat:0|intcomma }} FCFA
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Plafond crédit :</span>
+                    <span>{{ customer.credit_limit|floatformat:0|intcomma }} FCFA</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Crédit disponible :</span>
+                    <span class="text-success">{{ customer.available_credit|floatformat:0|intcomma }} FCFA</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Délai paiement :</span>
+                    <span>{{ customer.payment_terms }} jours</span>
+                </div>
+                <hr>
+                {% if customer.can_order %}
+                    <p class="text-success mb-0"><i class="bi bi-check-circle me-1"></i>Peut passer commande</p>
+                {% else %}
+                    <p class="text-danger mb-0"><i class="bi bi-x-circle me-1"></i>Commandes bloquées</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Score client -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-star me-2"></i>Scoring</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="display-4 text-serviac">{{ customer.manual_score }}/10</div>
+                <small class="text-muted">Note manuelle</small>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'crm:customer_update' customer.pk %}" class="btn btn-serviac">
+                    <i class="bi bi-pencil me-1"></i>Modifier
+                </a>
+                <a href="tel:{{ customer.phone }}" class="btn btn-outline-primary">
+                    <i class="bi bi-telephone me-1"></i>Appeler
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
