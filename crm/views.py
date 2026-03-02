@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
@@ -1516,6 +1517,7 @@ class UserProfileListView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         # Créer profils manquants
+        User = get_user_model()
         for user in User.objects.filter(profile__isnull=True):
             UserProfile.objects.create(user=user)
         return UserProfile.objects.select_related('user')
@@ -1590,9 +1592,9 @@ class ReportView(LoginRequiredMixin, TemplateView):
         )
         
         # Paiements
-        payments = Payment.objects.filter(payment_date__date__gte=start_date)
+        payments = Payment.objects.filter(payment_date__gte=start_date)
         context['payments_total'] = payments.aggregate(total=Sum('amount'))['total'] or 0
-        context['payments_by_method'] = payments.values('method').annotate(
+        context['payments_by_method'] = payments.values('payment_method').annotate(
             count=Count('id'),
             total=Sum('amount')
         )

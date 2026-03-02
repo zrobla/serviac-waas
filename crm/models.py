@@ -1993,6 +1993,9 @@ class KPISnapshot(models.Model):
     @classmethod
     def capture(cls, date=None):
         """Capturer les KPIs du jour"""
+        from django.db.models import Sum, F
+        from datetime import timedelta
+        
         if date is None:
             date = timezone.now().date()
         
@@ -2013,7 +2016,7 @@ class KPISnapshot(models.Model):
         ).distinct().count()
         
         # Paiements du jour
-        day_payments = Payment.objects.filter(payment_date__date=date)
+        day_payments = Payment.objects.filter(payment_date=date)
         snapshot.payments_received = day_payments.aggregate(total=Sum('amount'))['total'] or 0
         
         # Créances totales
