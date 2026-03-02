@@ -1,173 +1,371 @@
 {% extends 'base_website.html' %}
+{% load static %}
 
 {% block title %}Commander - SERVIAC GROUP{% endblock %}
 
 {% block extra_css %}
 <style>
-    .order-form-container { max-width: 900px; margin: 0 auto; }
-    .product-card { cursor: pointer; transition: all 0.2s; }
-    .product-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    .product-card.selected { border-color: var(--serviac-primary); border-width: 2px; }
-    .quantity-control { width: 120px; }
-    .cart-item { background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem; }
-    .step-indicator { display: flex; justify-content: center; margin-bottom: 2rem; }
-    .step { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; background: #e9ecef; margin: 0 1rem; font-weight: bold; }
-    .step.active { background: var(--serviac-primary); color: white; }
-    .step.completed { background: #28a745; color: white; }
+    .order-form-container { max-width: 1000px; margin: 0 auto; }
+    .product-card { 
+        cursor: pointer; 
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        overflow: hidden;
+    }
+    .product-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+    }
+    .product-card.selected { 
+        border-color: var(--serviac-gold); 
+        background: rgba(212, 168, 75, 0.05);
+    }
+    .product-image {
+        height: 180px;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    .product-card:hover .product-image {
+        transform: scale(1.05);
+    }
+    .quantity-control { width: 130px; }
+    .quantity-control .btn {
+        border-color: var(--serviac-blue);
+        color: var(--serviac-blue);
+    }
+    .quantity-control .btn:hover {
+        background: var(--serviac-blue);
+        color: white;
+    }
+    .step-progress {
+        display: flex;
+        justify-content: center;
+        gap: 0;
+        margin-bottom: 2rem;
+    }
+    .step-item {
+        display: flex;
+        align-items: center;
+    }
+    .step-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+        background: #e9ecef;
+        color: #6c757d;
+        transition: all 0.3s ease;
+        border: 3px solid transparent;
+    }
+    .step-circle.active {
+        background: var(--serviac-blue);
+        color: white;
+        border-color: var(--serviac-gold);
+    }
+    .step-circle.completed {
+        background: var(--serviac-gold);
+        color: white;
+    }
+    .step-line {
+        width: 80px;
+        height: 3px;
+        background: #e9ecef;
+    }
+    .step-line.completed {
+        background: var(--serviac-gold);
+    }
+    .step-label {
+        position: absolute;
+        bottom: -25px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        color: #6c757d;
+    }
+    .form-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    .form-card-header {
+        background: var(--gradient-primary);
+        color: white;
+        padding: 1.25rem 1.5rem;
+    }
+    .summary-card {
+        border: 2px solid var(--serviac-gold);
+        background: linear-gradient(135deg, rgba(212, 168, 75, 0.05), rgba(91, 143, 185, 0.05));
+    }
+    .price-badge {
+        background: var(--serviac-gold);
+        color: white;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-weight: bold;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="py-5">
-    <div class="container order-form-container">
-        <div class="text-center mb-4">
-            <h1 class="text-serviac"><i class="bi bi-cart-plus me-2"></i>Commander</h1>
-            <p class="text-muted">Passez votre commande en ligne - Livraison dans toute la Côte d'Ivoire</p>
+<!-- Hero -->
+<section style="background: var(--gradient-primary); padding: 150px 0 60px;">
+    <div class="container">
+        <div class="text-center text-white" data-aos="fade-up">
+            <span class="hero-badge mb-3">
+                <i class="bi bi-cart-plus me-2"></i>Commande en ligne
+            </span>
+            <h1 class="display-5 fw-bold mb-3">Passez votre commande</h1>
+            <p class="lead opacity-90">Farine de poisson premium - Livraison dans toute la Côte d'Ivoire</p>
         </div>
+    </div>
+</section>
+
+<section class="section-padding bg-white" style="margin-top: -30px;">
+    <div class="container order-form-container">
         
         <!-- Steps indicator -->
-        <div class="step-indicator">
-            <div class="step active" data-step="1">1</div>
-            <div class="step" data-step="2">2</div>
-            <div class="step" data-step="3">3</div>
+        <div class="step-progress mb-5" data-aos="fade-up">
+            <div class="step-item position-relative">
+                <div class="step-circle active" data-step="1">
+                    <i class="bi bi-person"></i>
+                </div>
+                <span class="step-label">Vos infos</span>
+            </div>
+            <div class="step-line" id="line-1-2"></div>
+            <div class="step-item position-relative">
+                <div class="step-circle" data-step="2">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <span class="step-label">Produits</span>
+            </div>
+            <div class="step-line" id="line-2-3"></div>
+            <div class="step-item position-relative">
+                <div class="step-circle" data-step="3">
+                    <i class="bi bi-credit-card"></i>
+                </div>
+                <span class="step-label">Paiement</span>
+            </div>
         </div>
         
         <form id="order-form" method="post">
             {% csrf_token %}
             
             <!-- Step 1: Informations client -->
-            <div class="card shadow mb-4" id="step-1">
-                <div class="card-header bg-serviac text-white">
-                    <h5 class="mb-0"><i class="bi bi-person me-2"></i>Étape 1 : Vos informations</h5>
+            <div class="card form-card mb-4" id="step-1" data-aos="fade-up">
+                <div class="form-card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>Étape 1 : Vos informations</h5>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
+                <div class="card-body p-4">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <label class="form-label">Nom complet / Entreprise *</label>
-                            <input type="text" name="client_name" class="form-control" required>
+                            <label class="form-label fw-semibold">Nom complet / Entreprise *</label>
+                            <input type="text" name="client_name" class="form-control form-control-lg" 
+                                   placeholder="Votre nom ou raison sociale" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Type de client *</label>
-                            <select name="client_type" class="form-select" id="client-type">
+                            <label class="form-label fw-semibold">Vous êtes *</label>
+                            <select name="client_type" class="form-select form-select-lg" id="client-type">
                                 <option value="B2C">Particulier</option>
-                                <option value="B2B">Professionnel (Entreprise)</option>
+                                <option value="B2B">Professionnel (Éleveur, Provendier...)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Téléphone *</label>
-                            <input type="tel" name="phone" class="form-control" placeholder="+225" required>
+                            <label class="form-label fw-semibold">Téléphone *</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" name="phone" class="form-control" placeholder="+225 07 XX XX XX XX" required>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control">
+                            <label class="form-label fw-semibold">Email</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                <input type="email" name="email" class="form-control" placeholder="votre@email.com">
+                            </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Adresse de livraison *</label>
-                            <textarea name="address" class="form-control" rows="2" required></textarea>
+                            <label class="form-label fw-semibold">Adresse de livraison *</label>
+                            <textarea name="address" class="form-control form-control-lg" rows="2" 
+                                      placeholder="Quartier, rue, repère..." required></textarea>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Ville *</label>
-                            <input type="text" name="city" class="form-control" value="Abidjan" required>
+                            <label class="form-label fw-semibold">Ville *</label>
+                            <select name="city" class="form-select form-select-lg" required>
+                                <option value="Abidjan" selected>Abidjan</option>
+                                <option value="Bouaké">Bouaké</option>
+                                <option value="Yamoussoukro">Yamoussoukro</option>
+                                <option value="San-Pédro">San-Pédro</option>
+                                <option value="Korhogo">Korhogo</option>
+                                <option value="Daloa">Daloa</option>
+                                <option value="Autre">Autre ville</option>
+                            </select>
                         </div>
                     </div>
                 </div>
             </div>
             
             <!-- Step 2: Produits -->
-            <div class="card shadow mb-4" id="step-2">
-                <div class="card-header bg-serviac text-white">
-                    <h5 class="mb-0"><i class="bi bi-box me-2"></i>Étape 2 : Vos produits</h5>
+            <div class="card form-card mb-4" id="step-2" data-aos="fade-up" data-aos-delay="100">
+                <div class="form-card-header">
+                    <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Étape 2 : Sélectionnez vos produits</h5>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3" id="products-list">
-                        <!-- Produit principal -->
-                        <div class="col-md-6">
-                            <div class="card product-card h-100" data-product-id="1">
-                                <div class="card-body">
-                                    <h6 class="card-title">Farine de Poisson - Sac 50kg</h6>
-                                    <p class="card-text small text-muted">Fish Meal Premium - Origine Sénégal</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="price-display fw-bold text-serviac" data-b2b="45000" data-b2c="50000">50 000 FCFA</span>
-                                        <div class="input-group quantity-control">
-                                            <button type="button" class="btn btn-outline-secondary btn-sm qty-minus">-</button>
-                                            <input type="number" name="qty_1" class="form-control form-control-sm text-center qty-input" value="0" min="0">
-                                            <button type="button" class="btn btn-outline-secondary btn-sm qty-plus">+</button>
+                <div class="card-body p-4">
+                    <div class="row g-4" id="products-list">
+                        <!-- Produit principal: Farine de Poisson -->
+                        <div class="col-lg-6">
+                            <div class="card product-card h-100 rounded-4 overflow-hidden" data-product-id="1">
+                                <img src="{% static 'website/images/product-bag.jpg' %}" class="product-image" alt="Farine de Poisson SERVIAC">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h5 class="card-title mb-1">Farine de Poisson</h5>
+                                            <p class="text-muted small mb-0">Fish Meal Premium - Ocean Atlantique</p>
                                         </div>
+                                        <span class="badge bg-success">En stock</span>
+                                    </div>
+                                    
+                                    <div class="d-flex flex-wrap gap-2 my-3">
+                                        <span class="badge bg-light text-dark"><i class="bi bi-box me-1"></i>Sac 50 kg</span>
+                                        <span class="badge bg-light text-dark"><i class="bi bi-shield-check me-1"></i>53% protéines</span>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="text-muted d-block">Prix unitaire</small>
+                                            <span class="price-badge price-display" data-b2b="45000" data-b2c="50000">50 000 FCFA</span>
+                                        </div>
+                                        <div class="input-group quantity-control">
+                                            <button type="button" class="btn btn-outline-primary qty-minus"><i class="bi bi-dash"></i></button>
+                                            <input type="number" name="qty_1" class="form-control text-center qty-input" value="0" min="0">
+                                            <button type="button" class="btn btn-outline-primary qty-plus"><i class="bi bi-plus"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Info: Prix différenciés -->
+                        <div class="col-lg-6">
+                            <div class="card h-100 border-0 rounded-4" style="background: var(--serviac-light);">
+                                <div class="card-body d-flex flex-column justify-content-center p-4">
+                                    <div class="text-center mb-4">
+                                        <i class="bi bi-info-circle display-4" style="color: var(--serviac-blue);"></i>
+                                    </div>
+                                    <h5 class="text-center mb-3">Tarifs Professionnels</h5>
+                                    <p class="text-muted text-center">
+                                        Les professionnels (éleveurs, provendiers, distributeurs) bénéficient de 
+                                        <strong>tarifs préférentiels</strong>.
+                                    </p>
+                                    <div class="alert alert-success mb-0 text-center">
+                                        <i class="bi bi-tag me-2"></i>
+                                        <strong>Sélectionnez "Professionnel"</strong> pour voir vos prix B2B
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Récapitulatif -->
-                    <div class="mt-4 p-3 bg-light rounded">
+                    <!-- Sous-total -->
+                    <div class="mt-4 p-4 rounded-4" style="background: linear-gradient(135deg, var(--serviac-light), white);">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span>Sous-total :</span>
-                            <span class="fw-bold fs-4 text-serviac" id="subtotal">0 FCFA</span>
+                            <div>
+                                <span class="text-muted">Sous-total</span>
+                                <small class="d-block text-muted">Livraison à calculer</small>
+                            </div>
+                            <span class="fw-bold fs-3" style="color: var(--serviac-blue);" id="subtotal">0 FCFA</span>
                         </div>
                     </div>
                 </div>
             </div>
             
             <!-- Step 3: Paiement -->
-            <div class="card shadow mb-4" id="step-3">
-                <div class="card-header bg-serviac text-white">
-                    <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Étape 3 : Paiement</h5>
+            <div class="card form-card mb-4" id="step-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="form-card-header">
+                    <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Étape 3 : Mode de paiement</h5>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
+                <div class="card-body p-4">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <label class="form-label">Mode de paiement souhaité *</label>
-                            <select name="payment_preference" class="form-select" required>
-                                <option value="cash">Espèces à la livraison</option>
-                                <option value="mobile_money">Mobile Money (Orange/MTN/Wave)</option>
-                                <option value="credit">Crédit (clients approuvés)</option>
-                                <option value="transfer">Virement bancaire</option>
+                            <label class="form-label fw-semibold">Mode de paiement souhaité *</label>
+                            <select name="payment_preference" class="form-select form-select-lg" required>
+                                <option value="cash">💵 Espèces à la livraison</option>
+                                <option value="mobile_money">📱 Mobile Money (Orange/MTN/Wave)</option>
+                                <option value="transfer">🏦 Virement bancaire</option>
+                                <option value="credit">📋 Crédit (clients approuvés)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Livraison souhaitée</label>
+                            <select name="delivery_preference" class="form-select form-select-lg">
+                                <option value="asap">Dès que possible</option>
+                                <option value="scheduled">Date précise (préciser en notes)</option>
+                                <option value="pickup">Retrait au dépôt (N'Dotré)</option>
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Notes / Instructions particulières</label>
-                            <textarea name="notes" class="form-control" rows="3" 
-                                      placeholder="Précisions sur la livraison, horaires préférés..."></textarea>
+                            <label class="form-label fw-semibold">Notes / Instructions particulières</label>
+                            <textarea name="notes" class="form-control form-control-lg" rows="3" 
+                                      placeholder="Précisions sur la livraison, horaires préférés, date souhaitée..."></textarea>
                         </div>
                     </div>
                 </div>
             </div>
             
             <!-- Récapitulatif final -->
-            <div class="card shadow border-success mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Récapitulatif de votre commande</h5>
-                </div>
-                <div class="card-body">
-                    <div id="order-summary">
-                        <p class="text-muted text-center">Ajoutez des produits pour voir le récapitulatif</p>
+            <div class="card summary-card rounded-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="card-body p-4">
+                    <h5 class="mb-4"><i class="bi bi-receipt me-2" style="color: var(--serviac-gold);"></i>Récapitulatif de votre commande</h5>
+                    <div id="order-summary" class="mb-4">
+                        <p class="text-muted text-center py-3 mb-0">
+                            <i class="bi bi-cart display-6 d-block mb-2" style="color: var(--serviac-blue);"></i>
+                            Ajoutez des produits pour voir le récapitulatif
+                        </p>
                     </div>
                     <hr>
-                    <div class="d-flex justify-content-between align-items-center fs-5">
-                        <span>Total à payer :</span>
-                        <span class="fw-bold text-success" id="total">0 FCFA</span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fs-5">Total à payer</span>
+                            <small class="d-block text-muted">Hors frais de livraison</small>
+                        </div>
+                        <span class="fw-bold display-6" style="color: var(--serviac-gold);" id="total">0 FCFA</span>
                     </div>
                 </div>
             </div>
             
             <!-- Submit -->
-            <div class="text-center">
-                <button type="submit" class="btn btn-serviac btn-lg px-5" id="submit-btn">
+            <div class="text-center" data-aos="fade-up" data-aos-delay="400">
+                <button type="submit" class="btn btn-gold btn-lg px-5 py-3" id="submit-btn">
                     <i class="bi bi-send me-2"></i>Envoyer ma commande
                 </button>
-                <p class="small text-muted mt-2">
-                    Vous recevrez une confirmation par téléphone ou email
+                <p class="text-muted mt-3">
+                    <i class="bi bi-shield-check me-1"></i>
+                    Vous recevrez une confirmation par téléphone ou email sous 24h
                 </p>
             </div>
         </form>
         
         <!-- Success message (hidden) -->
-        <div class="alert alert-success d-none" id="success-message">
-            <h4><i class="bi bi-check-circle me-2"></i>Commande envoyée !</h4>
-            <p>Votre commande a été reçue avec succès. Notre équipe vous contactera très bientôt pour confirmation.</p>
-            <a href="{% url 'website:home' %}" class="btn btn-success">Retour à l'accueil</a>
+        <div class="alert d-none rounded-4 p-5 text-center" id="success-message" 
+             style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(40, 167, 69, 0.05)); border: 2px solid #28a745;">
+            <i class="bi bi-check-circle display-1 text-success mb-4"></i>
+            <h3 class="text-success mb-3">Commande envoyée avec succès !</h3>
+            <p class="lead text-muted mb-4">
+                Merci pour votre commande ! Notre équipe vous contactera très bientôt pour confirmation et organisation de la livraison.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{% url 'website:home' %}" class="btn btn-success btn-lg">
+                    <i class="bi bi-house me-2"></i>Retour à l'accueil
+                </a>
+                <a href="https://wa.me/2250779057101" class="btn btn-outline-success btn-lg" target="_blank">
+                    <i class="bi bi-whatsapp me-2"></i>Nous contacter
+                </a>
+            </div>
         </div>
     </div>
 </section>
@@ -213,6 +411,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 total += qty * price;
                 items.push({ name: productName, qty: qty, price: price, subtotal: qty * price });
+                
+                card.classList.add('selected');
+            } else {
+                const card = input.closest('.product-card');
+                card.classList.remove('selected');
             }
         });
         
@@ -221,22 +424,60 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update summary
         if (items.length > 0) {
-            let html = '<ul class="list-unstyled mb-0">';
+            let html = '<div class="list-group list-group-flush">';
             items.forEach(item => {
-                html += `<li class="d-flex justify-content-between py-1">
-                    <span>${item.qty}x ${item.name}</span>
-                    <span class="fw-bold">${formatPrice(item.subtotal)} FCFA</span>
-                </li>`;
+                html += `<div class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                    <div>
+                        <strong>${item.qty} x</strong> ${item.name}
+                        <small class="d-block text-muted">${formatPrice(item.price)} FCFA/unité</small>
+                    </div>
+                    <span class="fw-bold" style="color: var(--serviac-blue);">${formatPrice(item.subtotal)} FCFA</span>
+                </div>`;
             });
-            html += '</ul>';
+            html += '</div>';
             summaryEl.innerHTML = html;
         } else {
-            summaryEl.innerHTML = '<p class="text-muted text-center mb-0">Ajoutez des produits</p>';
+            summaryEl.innerHTML = `<p class="text-muted text-center py-3 mb-0">
+                <i class="bi bi-cart display-6 d-block mb-2" style="color: var(--serviac-blue);"></i>
+                Ajoutez des produits pour voir le récapitulatif
+            </p>`;
+        }
+        
+        // Update step indicators
+        updateStepIndicators(items.length > 0);
+    }
+    
+    // Update step indicators
+    function updateStepIndicators(hasProducts) {
+        const step1 = document.querySelector('.step-circle[data-step="1"]');
+        const step2 = document.querySelector('.step-circle[data-step="2"]');
+        const line12 = document.getElementById('line-1-2');
+        
+        // Check if step 1 is filled
+        const name = document.querySelector('input[name="client_name"]').value;
+        const phone = document.querySelector('input[name="phone"]').value;
+        
+        if (name && phone) {
+            step1.classList.add('completed');
+            step1.classList.remove('active');
+            line12.classList.add('completed');
+            step2.classList.add('active');
+        }
+        
+        if (hasProducts) {
+            step2.classList.add('completed');
+            step2.classList.remove('active');
+            document.getElementById('line-2-3').classList.add('completed');
+            document.querySelector('.step-circle[data-step="3"]').classList.add('active');
         }
     }
     
     // Event listeners
     clientType.addEventListener('change', updatePrices);
+    
+    // Step validation on input
+    document.querySelector('input[name="client_name"]').addEventListener('input', () => calculateTotal());
+    document.querySelector('input[name="phone"]').addEventListener('input', () => calculateTotal());
     
     // Quantity controls
     document.querySelectorAll('.qty-plus').forEach(btn => {
@@ -286,20 +527,27 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        const city = formData.get('city');
+        const address = formData.get('address');
+        
         const data = {
             prospect_name: formData.get('client_name'),
             prospect_type: formData.get('client_type'),
             prospect_phone: formData.get('phone'),
             prospect_email: formData.get('email') || '',
-            prospect_address: formData.get('address'),
-            delivery_address: formData.get('address') + ', ' + formData.get('city'),
+            prospect_address: address,
+            delivery_address: address + ', ' + city,
             payment_preference: formData.get('payment_preference'),
-            notes: formData.get('notes') || '',
+            notes: (formData.get('delivery_preference') !== 'asap' ? 'Livraison: ' + formData.get('delivery_preference') + '. ' : '') + (formData.get('notes') || ''),
             items: items,
             total_requested: parseInt(totalEl.textContent.replace(/[^\d]/g, ''))
         };
         
         try {
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Envoi en cours...';
+            
             const response = await fetch('/api/v1/public/order/', {
                 method: 'POST',
                 headers: {
@@ -312,11 +560,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 form.classList.add('d-none');
                 document.getElementById('success-message').classList.remove('d-none');
-                window.scrollTo(0, 0);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
-                alert('Erreur lors de l\'envoi. Veuillez réessayer ou nous contacter par téléphone.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Envoyer ma commande';
+                alert('Erreur lors de l\'envoi. Veuillez réessayer ou nous contacter par téléphone au +225 07 79 05 71 01.');
             }
         } catch (error) {
+            document.getElementById('submit-btn').disabled = false;
+            document.getElementById('submit-btn').innerHTML = '<i class="bi bi-send me-2"></i>Envoyer ma commande';
             alert('Erreur de connexion. Veuillez réessayer.');
         }
     });

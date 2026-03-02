@@ -1,69 +1,225 @@
 {% extends 'base_website.html' %}
+{% load static %}
 
-{% block title %}À Propos - SERVIAC GROUP{% endblock %}
+{% block title %}Notre Histoire - SERVIAC GROUP{% endblock %}
 
 {% block content %}
-<section class="py-5">
+<!-- Hero À Propos -->
+<section style="background: var(--gradient-primary); padding: 150px 0 80px;">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="text-serviac mb-4">À Propos de SERVIAC GROUP</h1>
-                <p class="lead">
-                    Depuis <strong>2019</strong>, SERVIAC GROUP est votre partenaire de confiance pour 
-                    l'alimentation animale en Côte d'Ivoire.
-                </p>
-                <p>
-                    Basée à <strong>Abidjan</strong>, notre entreprise s'est imposée comme un acteur majeur 
-                    du secteur animalier grâce à notre engagement envers la qualité et le service client.
-                </p>
-                <p>
-                    Nous travaillons dans le domaine de la <strong>production, transformation, vente et 
-                    approvisionnement d'alimentation de bétail</strong> et bien plus encore.
-                </p>
+            <div class="col-lg-7 text-white" data-aos="fade-right">
+                <span class="hero-badge mb-3">
+                    <i class="bi bi-building me-2"></i>Notre Histoire
+                </span>
+                <h1 class="display-5 fw-bold mb-4">SERVIAC GROUP SUARL</h1>
+                <p class="lead opacity-90">Votre partenaire de confiance en nutrition animale depuis 2019. Du Sénégal à la Côte d'Ivoire, nous transportons l'excellence.</p>
             </div>
-            <div class="col-lg-6">
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h5 class="card-title text-serviac"><i class="bi bi-bullseye me-2"></i>Notre Mission</h5>
-                        <p>
-                            Offrir des solutions complètes et innovantes pour le bien-être de vos animaux 
-                            tout en garantissant une qualité irréprochable et des prix compétitifs.
-                        </p>
-                    </div>
+            <div class="col-lg-5" data-aos="fade-left">
+                <img src="{% static 'website/images/logo-transparent.png' %}" alt="Logo SERVIAC" class="img-fluid p-4">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Histoire & Mission -->
+<section class="section-padding bg-white">
+    <div class="container">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-6" data-aos="fade-right">
+                <img src="{% static 'website/images/fresh-fish.jpg' %}" alt="Poisson frais" class="img-fluid rounded-4 shadow-lg">
+            </div>
+            <div class="col-lg-6" data-aos="fade-left">
+                <h2 class="section-title">Notre Histoire</h2>
+                <div class="gold-line" style="margin-left: 0;"></div>
+                
+                <p class="lead text-muted mt-4">
+                    Fondée en <strong>2019</strong>, SERVIAC GROUP naît d'une vision : rapprocher les éleveurs 
+                    ouest-africains des meilleures sources de protéines animales.
+                </p>
+                
+                <p>
+                    Notre aventure commence au <strong>Sénégal</strong>, où les côtes de l'Océan Atlantique 
+                    offrent une abondance de poissons de qualité. Nous avons établi des partenariats solides 
+                    avec les producteurs locaux pour transformer ce trésor marin en farine de poisson premium.
+                </p>
+                
+                <p>
+                    Depuis <strong>Abidjan</strong>, notre centre de distribution stratégique, nous desservons 
+                    les éleveurs, provendiers et acteurs agricoles de toute la Côte d'Ivoire. Notre engagement : 
+                    garantir un approvisionnement régulier en produits de haute qualité.
+                </p>
+                
+                <div class="mt-4 p-4 rounded-4" style="background: var(--serviac-light);">
+                    <h5 style="color: var(--serviac-blue);"><i class="bi bi-bullseye me-2"></i>Notre Mission</h5>
+                    <p class="mb-0">
+                        Fournir aux professionnels de l'élevage des protéines animales de qualité supérieure, 
+                        avec un service fiable et des conditions commerciales adaptées à chaque partenaire.
+                    </p>
                 </div>
             </div>
         </div>
-        
-        <hr class="my-5">
+    </div>
+</section>
+
+<!-- Valeurs -->
+<section class="section-padding" style="background: var(--serviac-light);">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="section-title">Nos Valeurs</h2>
+            <div class="gold-line"></div>
+            <p class="section-subtitle">Les principes qui guident chacune de nos actions</p>
+        </div>
         
         <div class="row g-4">
-            <div class="col-md-4 text-center">
-                <div class="bg-serviac text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                    <i class="bi bi-calendar-check fs-2"></i>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px; background: rgba(91, 143, 185, 0.15);">
+                        <i class="bi bi-award fs-2" style="color: var(--serviac-blue);"></i>
+                    </div>
+                    <h5>Qualité</h5>
+                    <p class="text-muted small mb-0">Sélection rigoureuse des matières premières et contrôle strict à chaque étape</p>
                 </div>
-                <h5 class="mt-3">Depuis 2019</h5>
-                <p class="text-muted">Des années d'expérience au service de nos clients</p>
             </div>
-            <div class="col-md-4 text-center">
-                <div class="bg-serviac text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                    <i class="bi bi-geo-alt fs-2"></i>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px; background: rgba(212, 168, 75, 0.15);">
+                        <i class="bi bi-handshake fs-2" style="color: var(--serviac-gold);"></i>
+                    </div>
+                    <h5>Intégrité</h5>
+                    <p class="text-muted small mb-0">Relations commerciales transparentes et engagements respectés</p>
                 </div>
-                <h5 class="mt-3">Abidjan, CI</h5>
-                <p class="text-muted">Distribution dans toute la Côte d'Ivoire</p>
             </div>
-            <div class="col-md-4 text-center">
-                <div class="bg-serviac text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                    <i class="bi bi-people fs-2"></i>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px; background: rgba(91, 143, 185, 0.15);">
+                        <i class="bi bi-clock-history fs-2" style="color: var(--serviac-blue);"></i>
+                    </div>
+                    <h5>Fiabilité</h5>
+                    <p class="text-muted small mb-0">Approvisionnement régulier et livraisons dans les délais convenus</p>
                 </div>
-                <h5 class="mt-3">B2B & B2C</h5>
-                <p class="text-muted">Professionnels et particuliers</p>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px; background: rgba(212, 168, 75, 0.15);">
+                        <i class="bi bi-people fs-2" style="color: var(--serviac-gold);"></i>
+                    </div>
+                    <h5>Proximité</h5>
+                    <p class="text-muted small mb-0">Écoute active des besoins et accompagnement personnalisé</p>
+                </div>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- Chiffres Clés -->
+<section class="section-padding bg-white">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="100">
+                <div class="counter-box p-4 rounded-4" style="background: var(--gradient-primary);">
+                    <h2 class="text-white display-4 fw-bold mb-0">6+</h2>
+                    <p class="text-white opacity-75 mb-0">Années d'expérience</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="200">
+                <div class="counter-box p-4 rounded-4 border border-2" style="border-color: var(--serviac-gold) !important;">
+                    <h2 class="display-4 fw-bold mb-0" style="color: var(--serviac-gold);">500+</h2>
+                    <p class="text-muted mb-0">Clients satisfaits</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="300">
+                <div class="counter-box p-4 rounded-4" style="background: var(--serviac-blue);">
+                    <h2 class="text-white display-4 fw-bold mb-0">1000+</h2>
+                    <p class="text-white opacity-75 mb-0">Tonnes livrées/an</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="400">
+                <div class="counter-box p-4 rounded-4 border border-2" style="border-color: var(--serviac-blue) !important;">
+                    <h2 class="display-4 fw-bold mb-0" style="color: var(--serviac-blue);">100%</h2>
+                    <p class="text-muted mb-0">Traçabilité garantie</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Chaîne de Valeur -->
+<section class="section-padding" style="background: var(--gradient-primary);">
+    <div class="container">
+        <div class="text-center mb-5 text-white" data-aos="fade-up">
+            <h2>Notre Chaîne de Valeur</h2>
+            <p class="opacity-75">Du Sénégal à votre élevage, un parcours maîtrisé</p>
+        </div>
         
-        <div class="text-center mt-5">
-            <a href="{% url 'website:contact' %}" class="btn btn-serviac btn-lg">
-                <i class="bi bi-envelope me-2"></i>Nous contacter
-            </a>
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
+                <div class="text-center text-white">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 100px; height: 100px; background: rgba(255,255,255,0.2);">
+                        <i class="bi bi-water fs-1"></i>
+                    </div>
+                    <h5>Pêche</h5>
+                    <p class="opacity-75 small">Poissons frais pêchés dans l'Océan Atlantique, côtes sénégalaises</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="200">
+                <div class="text-center text-white">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 100px; height: 100px; background: rgba(255,255,255,0.2);">
+                        <i class="bi bi-gear fs-1"></i>
+                    </div>
+                    <h5>Transformation</h5>
+                    <p class="opacity-75 small">Production de farine de poisson dans nos unités au Sénégal</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="300">
+                <div class="text-center text-white">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 100px; height: 100px; background: rgba(255,255,255,0.2);">
+                        <i class="bi bi-truck fs-1"></i>
+                    </div>
+                    <h5>Transport</h5>
+                    <p class="opacity-75 small">Acheminement par route jusqu'à notre dépôt d'Abidjan</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="400">
+                <div class="text-center text-white">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 100px; height: 100px; background: rgba(255,255,255,0.2);">
+                        <i class="bi bi-box-seam fs-1"></i>
+                    </div>
+                    <h5>Distribution</h5>
+                    <p class="opacity-75 small">Livraison à nos clients partout en Côte d'Ivoire</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Contact -->
+<section class="section-padding bg-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8" data-aos="fade-right">
+                <h2 class="section-title">Travaillons Ensemble</h2>
+                <p class="lead text-muted">
+                    Que vous soyez éleveur, fabricant d'aliments ou revendeur, nous avons la solution 
+                    adaptée à vos besoins.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end" data-aos="fade-left">
+                <a href="{% url 'website:contact' %}" class="btn btn-gold btn-lg mb-2 me-2">
+                    <i class="bi bi-envelope me-2"></i>Nous contacter
+                </a>
+                <a href="{% url 'website:order_form' %}" class="btn btn-outline-dark btn-lg mb-2">
+                    <i class="bi bi-cart-plus me-2"></i>Commander
+                </a>
+            </div>
         </div>
     </div>
 </section>

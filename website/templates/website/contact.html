@@ -1,103 +1,229 @@
 {% extends 'base_website.html' %}
+{% load static %}
 
 {% block title %}Contact - SERVIAC GROUP{% endblock %}
 
 {% block content %}
-<section class="py-5">
+<!-- Hero Contact -->
+<section style="background: var(--gradient-primary); padding: 150px 0 80px;">
     <div class="container">
-        <h1 class="text-center mb-5 text-serviac">Contactez-nous</h1>
-        
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-geo-alt-fill display-4 text-serviac mb-3"></i>
-                        <h5>Adresse</h5>
-                        <p class="text-muted">
-                            Abidjan<br>
-                            Côte d'Ivoire
-                        </p>
+        <div class="text-center text-white" data-aos="fade-up">
+            <span class="hero-badge mb-3">
+                <i class="bi bi-headset me-2"></i>À votre écoute
+            </span>
+            <h1 class="display-5 fw-bold mb-4">Contactez-nous</h1>
+            <p class="lead opacity-90">Notre équipe est disponible pour répondre à toutes vos questions</p>
+        </div>
+    </div>
+</section>
+
+<!-- Coordonnées Cards -->
+<section class="section-padding bg-white">
+    <div class="container">
+        <div class="row g-4 justify-content-center" style="margin-top: -100px;">
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 70px; height: 70px; background: rgba(91, 143, 185, 0.15);">
+                        <i class="bi bi-geo-alt-fill fs-3" style="color: var(--serviac-blue);"></i>
                     </div>
+                    <h5>Adresse</h5>
+                    <p class="text-muted small mb-0">
+                        N'Dotré, près de Hotel Dandy<br>
+                        Abidjan, Côte d'Ivoire
+                    </p>
                 </div>
             </div>
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-telephone-fill display-4 text-serviac mb-3"></i>
-                        <h5>Téléphone</h5>
-                        <p class="text-muted">
-                            +225 XX XX XX XX XX<br>
-                            <small>Du lundi au samedi</small>
-                        </p>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 70px; height: 70px; background: rgba(212, 168, 75, 0.15);">
+                        <i class="bi bi-telephone-fill fs-3" style="color: var(--serviac-gold);"></i>
                     </div>
+                    <h5>Téléphone</h5>
+                    <p class="text-muted small mb-0">
+                        <a href="tel:+2250779057101" class="text-decoration-none">+225 07 79 05 71 01</a><br>
+                        <span class="text-muted">Lun - Sam: 8h - 18h</span>
+                    </p>
                 </div>
             </div>
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-envelope-fill display-4 text-serviac mb-3"></i>
-                        <h5>Email</h5>
-                        <p class="text-muted">
-                            contact@serviac-group.com<br>
-                            <small>Réponse sous 24h</small>
-                        </p>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 70px; height: 70px; background: rgba(91, 143, 185, 0.15);">
+                        <i class="bi bi-envelope-fill fs-3" style="color: var(--serviac-blue);"></i>
                     </div>
+                    <h5>Email</h5>
+                    <p class="text-muted small mb-0">
+                        <a href="mailto:info@serviac-group.com" class="text-decoration-none">info@serviac-group.com</a><br>
+                        <span class="text-muted">Réponse sous 24h</span>
+                    </p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" 
+                         style="width: 70px; height: 70px; background: rgba(37, 211, 102, 0.15);">
+                        <i class="bi bi-whatsapp fs-3" style="color: #25D366;"></i>
+                    </div>
+                    <h5>WhatsApp</h5>
+                    <p class="text-muted small mb-0">
+                        <a href="https://wa.me/2250779057101" target="_blank" class="text-decoration-none">+225 07 79 05 71 01</a><br>
+                        <span class="text-muted">Réponse rapide</span>
+                    </p>
                 </div>
             </div>
         </div>
-        
-        <div class="row mt-5">
-            <div class="col-lg-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header bg-serviac text-white">
-                        <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Envoyez-nous un message</h5>
+    </div>
+</section>
+
+<!-- Formulaire Contact -->
+<section class="section-padding" style="background: var(--serviac-light);">
+    <div class="container">
+        <div class="row g-5 align-items-stretch">
+            <div class="col-lg-5" data-aos="fade-right">
+                <h2 class="section-title">Envoyez-nous un message</h2>
+                <div class="gold-line" style="margin-left: 0;"></div>
+                
+                <p class="text-muted mt-4">
+                    Que vous soyez éleveur, fabricant d'aliments ou distributeur, notre équipe est là pour vous accompagner.
+                </p>
+                
+                <div class="mt-4">
+                    <div class="d-flex align-items-start mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3" 
+                             style="width: 50px; height: 50px; background: var(--serviac-blue);">
+                            <i class="bi bi-chat-dots text-white"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Demande d'information</h6>
+                            <p class="text-muted small mb-0">Posez vos questions sur nos produits et tarifs</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <form method="post" id="contact-form">
-                            {% csrf_token %}
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Nom complet *</label>
-                                    <input type="text" name="name" class="form-control" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Téléphone *</label>
-                                    <input type="tel" name="phone" class="form-control" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" name="email" class="form-control">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Sujet</label>
-                                    <select name="subject" class="form-select">
-                                        <option value="info">Demande d'information</option>
-                                        <option value="order">Question sur une commande</option>
-                                        <option value="partnership">Partenariat</option>
-                                        <option value="other">Autre</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Message *</label>
-                                    <textarea name="message" class="form-control" rows="4" required></textarea>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-serviac btn-lg">
-                                        <i class="bi bi-send me-2"></i>Envoyer
-                                    </button>
-                                </div>
+                    <div class="d-flex align-items-start mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3" 
+                             style="width: 50px; height: 50px; background: var(--serviac-gold);">
+                            <i class="bi bi-file-text text-white"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Demande de devis</h6>
+                            <p class="text-muted small mb-0">Obtenez un devis personnalisé selon vos besoins</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3" 
+                             style="width: 50px; height: 50px; background: var(--serviac-blue);">
+                            <i class="bi bi-building text-white"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Partenariat</h6>
+                            <p class="text-muted small mb-0">Discutons de possibilités de collaboration</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-5 p-4 rounded-4" style="background: white;">
+                    <h6 class="mb-3"><i class="bi bi-clock me-2" style="color: var(--serviac-gold);"></i>Horaires d'ouverture</h6>
+                    <table class="table table-sm mb-0">
+                        <tr>
+                            <td>Lundi - Vendredi</td>
+                            <td class="text-end"><strong>8h00 - 18h00</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Samedi</td>
+                            <td class="text-end"><strong>8h00 - 14h00</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Dimanche</td>
+                            <td class="text-end text-muted">Fermé</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="col-lg-7" data-aos="fade-left">
+                <div class="card card-premium p-4 p-lg-5">
+                    <form method="post" id="contact-form">
+                        {% csrf_token %}
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Nom complet *</label>
+                                <input type="text" name="name" class="form-control form-control-lg" placeholder="Votre nom" required>
                             </div>
-                        </form>
-                    </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Téléphone *</label>
+                                <input type="tel" name="phone" class="form-control form-control-lg" placeholder="+225 XX XX XX XX XX" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email</label>
+                                <input type="email" name="email" class="form-control form-control-lg" placeholder="votre@email.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Sujet</label>
+                                <select name="subject" class="form-select form-select-lg">
+                                    <option value="info">Demande d'information</option>
+                                    <option value="quote">Demande de devis</option>
+                                    <option value="order">Question sur une commande</option>
+                                    <option value="partnership">Partenariat / Distribution</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Type d'activité</label>
+                                <select name="activity_type" class="form-select form-select-lg">
+                                    <option value="">-- Sélectionnez --</option>
+                                    <option value="elevator">Éleveur (volailles, porcins, bovins...)</option>
+                                    <option value="feed_mill">Provendier / Moulin</option>
+                                    <option value="distributor">Distributeur / Revendeur</option>
+                                    <option value="aquaculture">Aquaculteur</option>
+                                    <option value="vet">Vétérinaire / Technicien agricole</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Message *</label>
+                                <textarea name="message" class="form-control form-control-lg" rows="5" 
+                                          placeholder="Décrivez votre besoin..." required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-gold btn-lg w-100">
+                                    <i class="bi bi-send me-2"></i>Envoyer le message
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-        
-        <div class="text-center mt-5">
-            <p class="lead">Vous préférez commander directement ?</p>
-            <a href="{% url 'website:order_form' %}" class="btn btn-warning btn-lg">
+    </div>
+</section>
+
+<!-- CTA Commander -->
+<section class="cta-section text-white text-center">
+    <div class="container position-relative" style="z-index: 2;">
+        <h2 class="mb-3" data-aos="fade-up">Prêt à Commander ?</h2>
+        <p class="lead opacity-90 mb-4" data-aos="fade-up" data-aos-delay="100">
+            Passez directement votre commande en ligne via notre formulaire sécurisé
+        </p>
+        <div data-aos="fade-up" data-aos-delay="200">
+            <a href="{% url 'website:order_form' %}" class="btn btn-gold btn-lg">
                 <i class="bi bi-cart-plus me-2"></i>Accéder au formulaire de commande
             </a>
+        </div>
+    </div>
+</section>
+
+<!-- Map Section -->
+<section class="bg-white">
+    <div class="container-fluid p-0">
+        <div class="ratio ratio-21x9" style="max-height: 400px;">
+            <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15889.543276974753!2d-3.9897396!3d5.3595535!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfc1ea4bb5e4d8e3%3A0xe90696d94df0c10c!2sAbidjan%2C%20C%C3%B4te%20d&#39;Ivoire!5e0!3m2!1sfr!2sfr!4v1709400000000!5m2!1sfr!2sfr" 
+                style="border:0;" 
+                allowfullscreen="" 
+                loading="lazy" 
+                referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
         </div>
     </div>
 </section>

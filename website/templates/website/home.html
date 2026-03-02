@@ -1,51 +1,247 @@
 {% extends 'base_website.html' %}
+{% load static %}
 
-{% block title %}SERVIAC GROUP - Alimentation Animale de Qualité{% endblock %}
+{% block title %}SERVIAC GROUP - Farine de Poisson Premium | Nutrition Animale{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="hero-section text-center">
-    <div class="container">
-        <h1 class="display-4 fw-bold mb-3">SERVIAC GROUP</h1>
-        <p class="lead mb-4">Production et distribution d'alimentation animale de qualité supérieure</p>
-        <p class="mb-4">Farine de Poisson - Fish Meal - Origine Sénégal</p>
-        <a href="{% url 'website:order_form' %}" class="btn btn-warning btn-lg fw-bold px-5">
-            <i class="bi bi-cart-plus me-2"></i>Commander maintenant
-        </a>
+<!-- Hero Section Premium -->
+<section class="hero-premium">
+    <div class="container hero-content">
+        <div class="row align-items-center min-vh-100 pt-5">
+            <div class="col-lg-7" data-aos="fade-right">
+                <span class="hero-badge">
+                    <i class="bi bi-award-fill me-2"></i>Qualité Premium Certifiée
+                </span>
+                <h1 class="text-white mb-4">
+                    L'Excellence en<br>
+                    <span style="color: var(--serviac-gold);">Nutrition Animale</span>
+                </h1>
+                <p class="lead text-white mb-4">
+                    Farine de poisson de haute qualité, produite au Sénégal selon les normes internationales. 
+                    Source de protéines animales idéale pour optimiser la croissance et la santé de vos élevages.
+                </p>
+                <div class="d-flex flex-wrap gap-3 mb-5">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-warning me-2 fs-5"></i>
+                        <span class="text-white">53% Protéines</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-warning me-2 fs-5"></i>
+                        <span class="text-white">Origine Atlantique</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-warning me-2 fs-5"></i>
+                        <span class="text-white">Sacs 50 Kg</span>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{% url 'website:order_form' %}" class="btn btn-gold btn-lg">
+                        <i class="bi bi-cart-plus me-2"></i>Commander Maintenant
+                    </a>
+                    <a href="{% url 'website:contact' %}" class="btn btn-outline-gold btn-lg text-white">
+                        <i class="bi bi-telephone me-2"></i>Nous Contacter
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block" data-aos="fade-left" data-aos-delay="200">
+                <div class="floating">
+                    <img src="{% static 'website/images/product-bag.jpg' %}" alt="Farine de Poisson SERVIAC" 
+                         class="img-fluid rounded-4 shadow-lg" style="max-height: 500px; object-fit: cover;">
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
-<!-- Produits phares -->
-<section class="py-5">
+<!-- Clients ciblés -->
+<section class="section-padding bg-white">
     <div class="container">
-        <h2 class="text-center mb-5 text-serviac">Nos Produits</h2>
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="section-title">À Qui S'Adresse Notre Produit ?</h2>
+            <div class="gold-line"></div>
+            <p class="section-subtitle">Une solution nutritionnelle adaptée à chaque professionnel de l'élevage</p>
+        </div>
+        
         <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-box-seam display-3 text-serviac mb-3"></i>
-                        <h5 class="card-title">Farine de Poisson</h5>
-                        <p class="card-text">Fish Meal haute qualité - Sacs de 50kg</p>
-                        <p class="fw-bold text-serviac">Origine: Océan Atlantique</p>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="mb-4">
+                        <div class="bg-light rounded-circle d-inline-flex p-4">
+                            <i class="bi bi-building fs-1" style="color: var(--serviac-blue);"></i>
+                        </div>
+                    </div>
+                    <h5>Fabricants d'Aliments</h5>
+                    <p class="text-muted small">Provendiers et usines de fabrication d'aliments composés pour animaux</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="mb-4">
+                        <div class="bg-light rounded-circle d-inline-flex p-4">
+                            <i class="bi bi-egg-fried fs-1" style="color: var(--serviac-gold);"></i>
+                        </div>
+                    </div>
+                    <h5>Éleveurs Avicoles</h5>
+                    <p class="text-muted small">Poulets de chair, pondeuses, pintades et autres volailles</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="mb-4">
+                        <div class="bg-light rounded-circle d-inline-flex p-4">
+                            <i class="bi bi-droplet fs-1" style="color: var(--serviac-blue);"></i>
+                        </div>
+                    </div>
+                    <h5>Aquaculteurs</h5>
+                    <p class="text-muted small">Fermes piscicoles, élevages de tilapia, silures et autres poissons</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="mb-4">
+                        <div class="bg-light rounded-circle d-inline-flex p-4">
+                            <i class="bi bi-heart-pulse fs-1" style="color: var(--serviac-gold);"></i>
+                        </div>
+                    </div>
+                    <h5>Vétérinaires & Techniciens</h5>
+                    <p class="text-muted small">Professionnels de la santé animale et nutrition</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Produit Phare -->
+<section class="section-padding" style="background: var(--serviac-light);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6" data-aos="fade-right">
+                <div class="img-overlay">
+                    <img src="{% static 'website/images/fresh-fish.jpg' %}" alt="Poisson frais de qualité" class="img-fluid rounded-4 shadow">
+                </div>
+            </div>
+            <div class="col-lg-6 ps-lg-5 mt-5 mt-lg-0" data-aos="fade-left">
+                <span class="text-uppercase fw-bold" style="color: var(--serviac-gold); letter-spacing: 2px;">Notre Produit Phare</span>
+                <h2 class="section-title mt-2">Farine de Poisson<br>Ocean Atlantique</h2>
+                <p class="text-muted mb-4">
+                    Issue de poissons frais pêchés dans l'Océan Atlantique au large des côtes sénégalaises, 
+                    notre farine de poisson est transformée selon des méthodes qui préservent sa haute valeur nutritive.
+                </p>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check2-circle fs-4 me-3" style="color: var(--serviac-gold);"></i>
+                            <span>Haute digestibilité</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check2-circle fs-4 me-3" style="color: var(--serviac-gold);"></i>
+                            <span>Acides aminés essentiels</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check2-circle fs-4 me-3" style="color: var(--serviac-gold);"></i>
+                            <span>Riche en Oméga-3</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check2-circle fs-4 me-3" style="color: var(--serviac-gold);"></i>
+                            <span>Sans OGM</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="{% url 'website:products' %}" class="btn btn-gold">
+                    <i class="bi bi-arrow-right me-2"></i>Voir les Détails
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Composition & Normes -->
+<section class="section-padding bg-white">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="section-title">Composition Nutritionnelle</h2>
+            <div class="gold-line"></div>
+            <p class="section-subtitle">Conforme aux normes internationales de qualité</p>
+        </div>
+        
+        <div class="row align-items-center">
+            <div class="col-lg-7" data-aos="fade-right">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Protéines brutes</span>
+                        <span class="fw-bold" style="color: var(--serviac-gold);">53%</span>
+                    </div>
+                    <div class="composition-bar">
+                        <div class="progress-bar" style="width: 53%;">53%</div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Matières minérales</span>
+                        <span class="fw-bold" style="color: var(--serviac-gold);">26.5%</span>
+                    </div>
+                    <div class="composition-bar">
+                        <div class="progress-bar" style="width: 26.5%;">26.5%</div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Humidité</span>
+                        <span class="fw-bold" style="color: var(--serviac-blue);">7%</span>
+                    </div>
+                    <div class="composition-bar">
+                        <div class="progress-bar" style="width: 7%;">7%</div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">NaCl (Sel)</span>
+                        <span class="fw-bold" style="color: var(--serviac-blue);">4.5%</span>
+                    </div>
+                    <div class="composition-bar">
+                        <div class="progress-bar" style="width: 4.5%;">4.5%</div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Impuretés</span>
+                        <span class="fw-bold text-success">&lt; 2%</span>
+                    </div>
+                    <div class="composition-bar">
+                        <div class="progress-bar bg-success" style="width: 2%;">&lt;2%</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-award display-3 text-serviac mb-3"></i>
-                        <h5 class="card-title">Qualité Premium</h5>
-                        <p class="card-text">Produits transformés au Sénégal selon les normes internationales</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-truck display-3 text-serviac mb-3"></i>
-                        <h5 class="card-title">Livraison</h5>
-                        <p class="card-text">Distribution dans toute la Côte d'Ivoire</p>
-                        <p class="small text-muted">B2B et B2C</p>
+            <div class="col-lg-5 ps-lg-5" data-aos="fade-left">
+                <div class="card border-0 shadow-lg rounded-4 p-4" style="background: var(--gradient-primary);">
+                    <div class="card-body text-white">
+                        <h4 class="mb-4"><i class="bi bi-shield-check me-2"></i>Certifications & Contrôles</h4>
+                        <ul class="list-unstyled">
+                            <li class="mb-3 d-flex align-items-start">
+                                <i class="bi bi-check-circle-fill text-warning me-3 mt-1"></i>
+                                <span>Contrôle qualité au Sénégal (pays de production)</span>
+                            </li>
+                            <li class="mb-3 d-flex align-items-start">
+                                <i class="bi bi-check-circle-fill text-warning me-3 mt-1"></i>
+                                <span>Inspection sanitaire en Côte d'Ivoire</span>
+                            </li>
+                            <li class="mb-3 d-flex align-items-start">
+                                <i class="bi bi-check-circle-fill text-warning me-3 mt-1"></i>
+                                <span>Conformité normes IFFO (International Fishmeal)</span>
+                            </li>
+                            <li class="mb-3 d-flex align-items-start">
+                                <i class="bi bi-check-circle-fill text-warning me-3 mt-1"></i>
+                                <span>Traçabilité complète du produit</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -53,42 +249,258 @@
     </div>
 </section>
 
-<!-- Pourquoi nous choisir -->
-<section class="py-5 bg-light">
+<!-- Statistiques -->
+<section class="stats-section">
     <div class="container">
-        <h2 class="text-center mb-5 text-serviac">Pourquoi choisir SERVIAC ?</h2>
-        <div class="row g-4">
-            <div class="col-md-3 text-center">
-                <i class="bi bi-check-circle-fill display-4 text-serviac mb-3"></i>
-                <h6>Qualité garantie</h6>
+        <div class="row g-4 text-center">
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="100">
+                <div class="stat-item">
+                    <span class="stat-number">5+</span>
+                    <span class="stat-label">Années d'expérience</span>
+                </div>
             </div>
-            <div class="col-md-3 text-center">
-                <i class="bi bi-clock-fill display-4 text-serviac mb-3"></i>
-                <h6>Livraison rapide</h6>
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="200">
+                <div class="stat-item">
+                    <span class="stat-number">500+</span>
+                    <span class="stat-label">Clients satisfaits</span>
+                </div>
             </div>
-            <div class="col-md-3 text-center">
-                <i class="bi bi-cash-stack display-4 text-serviac mb-3"></i>
-                <h6>Paiement flexible</h6>
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="300">
+                <div class="stat-item">
+                    <span class="stat-number">53%</span>
+                    <span class="stat-label">Taux protéines</span>
+                </div>
             </div>
-            <div class="col-md-3 text-center">
-                <i class="bi bi-headset display-4 text-serviac mb-3"></i>
-                <h6>Support client</h6>
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="400">
+                <div class="stat-item">
+                    <span class="stat-number">50kg</span>
+                    <span class="stat-label">Conditionnement</span>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- CTA -->
-<section class="py-5 bg-serviac text-white text-center">
+<!-- Avantages -->
+<section class="section-padding bg-white">
     <div class="container">
-        <h3 class="mb-3">Prêt à commander ?</h3>
-        <p class="mb-4">Passez votre commande en ligne ou contactez-nous</p>
-        <a href="{% url 'website:order_form' %}" class="btn btn-warning btn-lg me-2">
-            <i class="bi bi-cart-plus me-1"></i>Commander
-        </a>
-        <a href="{% url 'website:contact' %}" class="btn btn-outline-light btn-lg">
-            <i class="bi bi-telephone me-1"></i>Nous contacter
-        </a>
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="section-title">Pourquoi Choisir Notre Farine de Poisson ?</h2>
+            <div class="gold-line"></div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-3" style="background: rgba(91, 143, 185, 0.1);">
+                            <i class="bi bi-lightning-charge fs-3" style="color: var(--serviac-blue);"></i>
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h5>Croissance Accélérée</h5>
+                        <p class="text-muted">Favorise une croissance rapide et saine des animaux grâce à sa haute teneur en protéines digestibles</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-3" style="background: rgba(212, 168, 75, 0.1);">
+                            <i class="bi bi-shield-plus fs-3" style="color: var(--serviac-gold);"></i>
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h5>Immunité Renforcée</h5>
+                        <p class="text-muted">Les acides aminés essentiels et oméga-3 renforcent le système immunitaire des animaux</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-3" style="background: rgba(91, 143, 185, 0.1);">
+                            <i class="bi bi-currency-dollar fs-3" style="color: var(--serviac-blue);"></i>
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h5>Rentabilité Optimale</h5>
+                        <p class="text-muted">Meilleur indice de conversion alimentaire = réduction des coûts d'élevage</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="400">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-3" style="background: rgba(212, 168, 75, 0.1);">
+                            <i class="bi bi-egg fs-3" style="color: var(--serviac-gold);"></i>
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h5>Production Améliorée</h5>
+                        <p class="text-muted">Améliore le taux de ponte et la qualité des œufs chez les pondeuses</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="500">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-3" style="background: rgba(91, 143, 185, 0.1);">
+                            <i class="bi bi-water fs-3" style="color: var(--serviac-blue);"></i>
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h5>Idéal Aquaculture</h5>
+                        <p class="text-muted">Source de protéines parfaitement adaptée à l'alimentation des poissons d'élevage</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="600">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-3" style="background: rgba(212, 168, 75, 0.1);">
+                            <i class="bi bi-truck fs-3" style="color: var(--serviac-gold);"></i>
+                        </div>
+                    </div>
+                    <div class="ms-4">
+                        <h5>Approvisionnement Fiable</h5>
+                        <p class="text-muted">Stock permanent et livraison régulière dans toute la Côte d'Ivoire</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Galerie / Processus -->
+<section class="section-padding" style="background: var(--serviac-light);">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="section-title">Notre Chaîne de Valeur</h2>
+            <div class="gold-line"></div>
+            <p class="section-subtitle">De la pêche à votre exploitation</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-premium h-100 overflow-hidden">
+                    <img src="{% static 'website/images/fresh-fish.jpg' %}" class="card-img-top" alt="Poisson frais">
+                    <div class="card-body">
+                        <span class="badge mb-2" style="background: var(--serviac-gold);">Étape 1</span>
+                        <h5>Pêche Responsable</h5>
+                        <p class="text-muted small">Poissons frais de l'Océan Atlantique, pêchés selon des méthodes durables au Sénégal</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-premium h-100 overflow-hidden">
+                    <img src="{% static 'website/images/fish-meal.jpg' %}" class="card-img-top" alt="Transformation">
+                    <div class="card-body">
+                        <span class="badge mb-2" style="background: var(--serviac-blue);">Étape 2</span>
+                        <h5>Transformation</h5>
+                        <p class="text-muted small">Séchage et broyage selon les méthodes traditionnelles préservant les nutriments</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-premium h-100 overflow-hidden">
+                    <img src="{% static 'website/images/delivery.jpg' %}" class="card-img-top" alt="Livraison">
+                    <div class="card-body">
+                        <span class="badge mb-2" style="background: var(--serviac-gold);">Étape 3</span>
+                        <h5>Livraison</h5>
+                        <p class="text-muted small">Conditionnement en sacs de 50kg et distribution dans toute la Côte d'Ivoire</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Témoignage -->
+<section class="section-padding bg-white">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8" data-aos="fade-up">
+                <div class="testimonial-card text-center">
+                    <p class="fs-5 mb-4" style="position: relative; z-index: 1;">
+                        "Pour apporter une réponse adéquate au problème de la nutrition animale, nous avons décidé d'exister 
+                        pour mettre à la disposition des éleveurs et des entreprises de fabrication d'aliments pour animaux, 
+                        de la farine de poisson de qualité. Jusqu'ici nos clients sont satisfaits de nos produits."
+                    </p>
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="rounded-circle bg-light p-3 me-3">
+                            <i class="bi bi-person fs-4" style="color: var(--serviac-dark);"></i>
+                        </div>
+                        <div class="text-start">
+                            <h6 class="mb-0">M. Abdoulaye CAMARA</h6>
+                            <small class="text-muted">Directeur Général, SERVIAC GROUP</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section text-white">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="row align-items-center">
+            <div class="col-lg-8" data-aos="fade-right">
+                <h2 class="mb-3">Prêt à Optimiser Votre Élevage ?</h2>
+                <p class="lead opacity-90 mb-0">
+                    Commandez dès maintenant notre farine de poisson premium. Livraison rapide dans toute la Côte d'Ivoire.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0" data-aos="fade-left">
+                <a href="{% url 'website:order_form' %}" class="btn btn-gold btn-lg me-2 mb-2">
+                    <i class="bi bi-cart-plus me-2"></i>Commander
+                </a>
+                <a href="tel:+2250779057101" class="btn btn-outline-light btn-lg mb-2">
+                    <i class="bi bi-telephone me-2"></i>Appeler
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact rapide -->
+<section class="section-padding bg-white">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px; background: rgba(91, 143, 185, 0.1);">
+                        <i class="bi bi-geo-alt fs-2" style="color: var(--serviac-blue);"></i>
+                    </div>
+                    <h5>Notre Entrepôt</h5>
+                    <p class="text-muted">N'Dotré, non loin du carrefour Hôtel Dandy<br>Abidjan, Côte d'Ivoire</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px; background: rgba(212, 168, 75, 0.1);">
+                        <i class="bi bi-telephone fs-2" style="color: var(--serviac-gold);"></i>
+                    </div>
+                    <h5>Téléphone</h5>
+                    <p class="text-muted mb-2">+225 07 79 05 71 01</p>
+                    <a href="tel:+2250779057101" class="btn btn-sm btn-outline-dark">Appeler maintenant</a>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-premium h-100 text-center p-4">
+                    <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px; background: rgba(91, 143, 185, 0.1);">
+                        <i class="bi bi-envelope fs-2" style="color: var(--serviac-blue);"></i>
+                    </div>
+                    <h5>Email</h5>
+                    <p class="text-muted mb-2">info@serviac-group.com</p>
+                    <a href="mailto:info@serviac-group.com" class="btn btn-sm btn-outline-dark">Envoyer un email</a>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}
