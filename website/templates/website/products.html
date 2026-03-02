@@ -46,7 +46,7 @@
 
 {% block content %}
 <!-- Hero Products -->
-<section style="background: var(--gradient-primary); padding: 150px 0 80px;">
+<section style="background: var(--gradient-primary); padding: 150px 0 60px;">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6 text-white" data-aos="fade-right">
@@ -54,10 +54,53 @@
                     <i class="bi bi-box-seam me-2"></i>Nos Produits
                 </span>
                 <h1 class="display-5 fw-bold mb-4">Farine de Poisson<br><span style="color: var(--serviac-gold);">Ocean Atlantique</span></h1>
-                <p class="lead opacity-90">Source de protéines animales de haute qualité pour optimiser vos formulations alimentaires</p>
+                <p class="lead mb-0" style="color: rgba(255,255,255,0.7);">Source de protéines animales de haute qualité pour optimiser vos formulations alimentaires</p>
             </div>
             <div class="col-lg-6" data-aos="fade-left">
                 <img src="{% static 'website/images/autocollant-monoblue.svg' %}" alt="Sac Farine de Poisson SERVIAC" class="img-fluid rounded-4 shadow-lg" style="background: white; padding: 20px;">
+            </div>
+        </div>
+        
+        <!-- Cards Premium dans le Hero -->
+        <div class="row g-4 mt-5" data-aos="fade-up" data-aos-delay="200">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 rounded-4" style="background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);">
+                    <div class="card-body p-4 text-white">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle p-3 me-3" style="background: linear-gradient(135deg, var(--serviac-gold), #e8c36a);">
+                                <i class="bi bi-award-fill fs-4 text-white"></i>
+                            </div>
+                            <h5 class="mb-0 fw-bold">53% Protéines</h5>
+                        </div>
+                        <p class="mb-0 small" style="color: rgba(255,255,255,0.8);">Teneur exceptionnelle en protéines brutes pour une nutrition animale optimale et des performances de croissance supérieures.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 rounded-4" style="background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);">
+                    <div class="card-body p-4 text-white">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle p-3 me-3" style="background: linear-gradient(135deg, #28a745, #5cb85c);">
+                                <i class="bi bi-check-circle-fill fs-4 text-white"></i>
+                            </div>
+                            <h5 class="mb-0 fw-bold">Qualité Certifiée</h5>
+                        </div>
+                        <p class="mb-0 small" style="color: rgba(255,255,255,0.8);">Production contrôlée au Sénégal selon les normes internationales. Traçabilité complète de l'océan à la livraison.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 rounded-4" style="background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);">
+                    <div class="card-body p-4 text-white">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle p-3 me-3" style="background: linear-gradient(135deg, #17a2b8, #5bc0de);">
+                                <i class="bi bi-truck fs-4 text-white"></i>
+                            </div>
+                            <h5 class="mb-0 fw-bold">Livraison Garantie</h5>
+                        </div>
+                        <p class="mb-0 small" style="color: rgba(255,255,255,0.8);">Distribution dans toute la Côte d'Ivoire. Stock permanent à Abidjan pour répondre à vos besoins urgents.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
