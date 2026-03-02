@@ -138,10 +138,10 @@
                         <tr>
                             <td>
                                 <a href="{% url 'crm:sale_detail' sale.pk %}" class="fw-bold text-decoration-none">
-                                    {{ sale.invoice_number }}
+                                    {{ sale.number }}
                                 </a>
                             </td>
-                            <td>{{ sale.date|date:"d/m/Y" }}</td>
+                            <td>{{ sale.invoice_date|date:"d/m/Y" }}</td>
                             <td>
                                 {% if sale.customer %}
                                     <a href="{% url 'crm:customer_detail' sale.customer.pk %}">
@@ -151,7 +151,7 @@
                                     <span class="text-muted">Vente Comptoir</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end fw-bold">{{ sale.total_ttc|floatformat:0 }} FCFA</td>
+                            <td class="text-end fw-bold">{{ sale.total|floatformat:0 }} FCFA</td>
                             <td>
                                 {% if sale.status == 'paid' %}
                                     <span class="badge bg-success">Payée</span>

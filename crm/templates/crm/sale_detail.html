@@ -1,7 +1,7 @@
 {% extends 'base_crm.html' %}
 {% load static %}
 
-{% block title %}Vente #{{ sale.invoice_number }} - SERVIAC CRM{% endblock %}
+{% block title %}Vente #{{ sale.number }} - SERVIAC CRM{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -11,11 +11,11 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1">
                     <li class="breadcrumb-item"><a href="{% url 'crm:sale_list' %}">Ventes Express</a></li>
-                    <li class="breadcrumb-item active">{{ sale.invoice_number }}</li>
+                    <li class="breadcrumb-item active">{{ sale.number }}</li>
                 </ol>
             </nav>
             <h1 class="h3 mb-0">
-                <i class="bi bi-receipt-cutoff text-success me-2"></i>Vente #{{ sale.invoice_number }}
+                <i class="bi bi-receipt-cutoff text-success me-2"></i>Vente #{{ sale.number }}
             </h1>
         </div>
         <div class="btn-group">
@@ -52,11 +52,11 @@
                             <table class="table table-borderless mb-0">
                                 <tr>
                                     <td class="text-muted" width="40%">N° Facture</td>
-                                    <td class="fw-bold">{{ sale.invoice_number }}</td>
+                                    <td class="fw-bold">{{ sale.number }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted">Date</td>
-                                    <td>{{ sale.date|date:"d/m/Y" }}</td>
+                                    <td>{{ sale.invoice_date|date:"d/m/Y" }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted">Échéance</td>
@@ -140,7 +140,7 @@
                             <tfoot class="table-light">
                                 <tr>
                                     <td colspan="4" class="text-end fw-bold">Total HT</td>
-                                    <td class="text-end fw-bold">{{ sale.total_ht|floatformat:0 }} FCFA</td>
+                                    <td class="text-end fw-bold">{{ sale.subtotal|floatformat:0 }} FCFA</td>
                                 </tr>
                                 {% if sale.tax_amount > 0 %}
                                 <tr>
@@ -150,7 +150,7 @@
                                 {% endif %}
                                 <tr class="table-success">
                                     <td colspan="4" class="text-end fw-bold fs-5">TOTAL TTC</td>
-                                    <td class="text-end fw-bold fs-5">{{ sale.total_ttc|floatformat:0 }} FCFA</td>
+                                    <td class="text-end fw-bold fs-5">{{ sale.total|floatformat:0 }} FCFA</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -179,7 +179,7 @@
                     <h5 class="text-white-50 mb-3">Résumé Paiement</h5>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Total facture</span>
-                        <span class="fw-bold">{{ sale.total_ttc|floatformat:0 }} FCFA</span>
+                        <span class="fw-bold">{{ sale.total|floatformat:0 }} FCFA</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Montant payé</span>
@@ -188,9 +188,9 @@
                     <hr class="bg-white opacity-25">
                     <div class="d-flex justify-content-between">
                         <span class="fs-5">Reste à payer</span>
-                        {% with reste=sale.total_ttc|add:sale.amount_paid|add:"-"|add:sale.amount_paid %}
-                        <span class="fs-4 fw-bold {% if sale.amount_paid >= sale.total_ttc %}text-success{% else %}text-warning{% endif %}">
-                            {% if sale.amount_paid >= sale.total_ttc %}
+                        {% with reste=sale.total|add:sale.amount_paid|add:"-"|add:sale.amount_paid %}
+                        <span class="fs-4 fw-bold {% if sale.amount_paid >= sale.total %}text-success{% else %}text-warning{% endif %}">
+                            {% if sale.amount_paid >= sale.total %}
                                 0 FCFA
                             {% else %}
                                 {{ sale.remaining_amount|floatformat:0 }} FCFA

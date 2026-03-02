@@ -1741,7 +1741,7 @@ class QuickPaymentView(LoginRequiredMixin, View):
             method=method,
             reference=f'ENC-{timezone.now().strftime("%Y%m%d%H%M%S")}',
             received_by=request.user,
-            notes=f'Encaissement rapide facture {invoice.invoice_number}'
+            notes=f'Encaissement rapide facture {invoice.number}'
         )
         
         # Mettre à jour la facture
@@ -1757,7 +1757,7 @@ class QuickPaymentView(LoginRequiredMixin, View):
             entry_type='in',
             amount=amount,
             payment_method=method,
-            description=f'Paiement facture {invoice.invoice_number}',
+            description=f'Paiement facture {invoice.number}',
             reference=payment.reference,
             payment=payment,
             created_by=request.user
@@ -2214,7 +2214,7 @@ class SaleListView(LoginRequiredMixin, ListView):
         # Les ventes express sont les factures directes (sans commande préalable)
         qs = Invoice.objects.filter(
             order__isnull=True
-        ).select_related('customer').order_by('-date')
+        ).select_related('customer').order_by('-invoice_date')
         
         # Filtres
         status = self.request.GET.get('status')
@@ -2244,9 +2244,9 @@ class SaleListView(LoginRequiredMixin, ListView):
         
         # Stats du jour
         today = timezone.now().date()
-        today_sales = self.get_queryset().filter(date=today)
+        today_sales = self.get_queryset().filter(invoice_date=today)
         context['today_count'] = today_sales.count()
-        context['today_total'] = today_sales.aggregate(total=Sum('total_ttc'))['total'] or 0
+        context['today_total'] = today_sales.aggregate(total=Sum('total'))['total'] or 0
         
         return context
 
@@ -2337,8 +2337,8 @@ class SaleCreateView(LoginRequiredMixin, View):
                     product=product,
                     movement_type=StockMovementType.SALE,
                     quantity=-quantity,
-                    reference=f"VENTE-{invoice.invoice_number}",
-                    notes=f"Vente express #{invoice.invoice_number}",
+                    reference=f"VENTE-{invoice.number}",
+                    notes=f"Vente express #{invoice.number}",
                     created_by=request.user
                 )
                 
@@ -2347,8 +2347,8 @@ class SaleCreateView(LoginRequiredMixin, View):
                 product.save()
             
             # Mettre à jour les totaux
-            invoice.total_ht = total_ht
-            invoice.total_ttc = total_ht  # Pas de TVA pour l'instant
+            invoice.subtotal = total_ht
+            invoice.total = total_ht  # Pas de TVA pour l'instant
             invoice.amount_paid = total_ht
             invoice.save()
             
@@ -2359,9 +2359,9 @@ class SaleCreateView(LoginRequiredMixin, View):
                 amount=total_ht,
                 payment_method=payment_method,
                 payment_type=PaymentType.PAYMENT,
-                reference=payment_reference or f"VENTE-{invoice.invoice_number}",
+                reference=payment_reference or f"VENTE-{invoice.number}",
                 status=PaymentStatus.COMPLETED,
-                notes=f"Paiement vente express #{invoice.invoice_number}",
+                notes=f"Paiement vente express #{invoice.number}",
                 created_by=request.user
             )
             
@@ -2373,7 +2373,7 @@ class SaleCreateView(LoginRequiredMixin, View):
                         register=open_register,
                         payment=payment,
                         amount=total_ht,
-                        description=f"Vente express #{invoice.invoice_number}",
+                        description=f"Vente express #{invoice.number}",
                         created_by=request.user
                     )
                     open_register.current_balance += total_ht
@@ -2389,7 +2389,7 @@ class SaleCreateView(LoginRequiredMixin, View):
                 changes={'type': 'Vente express', 'total': str(total_ht)}
             )
             
-            messages.success(request, f"Vente #{invoice.invoice_number} créée avec succès! Total: {total_ht:,.0f} FCFA")
+            messages.success(request, f"Vente #{invoice.number} créée avec succès! Total: {total_ht:,.0f} FCFA")
             return redirect('crm:sale_detail', pk=invoice.pk)
             
         except Exception as e:
@@ -2496,7 +2496,7 @@ class SalePDFView(LoginRequiredMixin, View):
         elements.append(Spacer(1, 0.5*cm))
         
         # Type de document
-        elements.append(Paragraph(f"<b>FACTURE N° {invoice.invoice_number}</b>", ParagraphStyle(
+        elements.append(Paragraph(f"<b>FACTURE N° {invoice.number}</b>", ParagraphStyle(
             'DocTitle', parent=styles['Heading2'], fontSize=16, alignment=TA_CENTER,
             textColor=colors.HexColor('#1e3a5f')
         )))
@@ -2562,10 +2562,10 @@ class SalePDFView(LoginRequiredMixin, View):
         
         # Totaux
         totals_data = [
-            ['', '', '', Paragraph('<b>Total HT:</b>', bold_style), Paragraph(f"<b>{invoice.total_ht:,.0f} FCFA</b>", bold_style)],
+            ['', '', '', Paragraph('<b>Total HT:</b>', bold_style), Paragraph(f"<b>{invoice.subtotal:,.0f} FCFA</b>", bold_style)],
             ['', '', '', Paragraph('<b>TVA:</b>', bold_style), Paragraph(f"<b>{invoice.tax_amount:,.0f} FCFA</b>", bold_style)],
             ['', '', '', Paragraph('<b>TOTAL TTC:</b>', ParagraphStyle('TotalBold', parent=bold_style, fontSize=12, textColor=colors.HexColor('#1e3a5f'))), 
-             Paragraph(f"<b>{invoice.total_ttc:,.0f} FCFA</b>", ParagraphStyle('TotalBold', parent=bold_style, fontSize=12, textColor=colors.HexColor('#1e3a5f')))],
+             Paragraph(f"<b>{invoice.total:,.0f} FCFA</b>", ParagraphStyle('TotalBold', parent=bold_style, fontSize=12, textColor=colors.HexColor('#1e3a5f')))],
         ]
         
         totals_table = Table(totals_data, colWidths=[2.5*cm, 8*cm, 2*cm, 2.75*cm, 2.75*cm])
@@ -2578,11 +2578,11 @@ class SalePDFView(LoginRequiredMixin, View):
         elements.append(Spacer(1, 1*cm))
         
         # Statut paiement
-        if invoice.amount_paid >= invoice.total_ttc:
+        if invoice.amount_paid >= invoice.total:
             status_text = "✓ PAYÉE"
             status_color = colors.HexColor('#28a745')
         else:
-            status_text = f"Reste à payer: {(invoice.total_ttc - invoice.amount_paid):,.0f} FCFA"
+            status_text = f"Reste à payer: {(invoice.total - invoice.amount_paid):,.0f} FCFA"
             status_color = colors.HexColor('#dc3545')
         
         elements.append(Paragraph(f"<b>{status_text}</b>", ParagraphStyle(
@@ -2610,7 +2610,7 @@ class SalePDFView(LoginRequiredMixin, View):
         # Retourner la réponse
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="facture_{invoice.invoice_number}.pdf"'
+        response['Content-Disposition'] = f'inline; filename="facture_{invoice.number}.pdf"'
         
         return response
 
