@@ -794,6 +794,346 @@ class AgedBalanceView(LoginRequiredMixin, TemplateView):
         return context
 
 
+# ============================================================
+# PHASE 4: GESTION STOCK INTELLIGENTE
+# ============================================================
+
+from .models import (Shipment, ShipmentItem, ShipmentStatus, StockMovement, StockMovementType,
+                     CustomerScore, PreOrder, PreOrderStatus, StockReservation,
+                     InventoryControl, InventoryLine, InventoryControlStatus)
+
+
+class StockDashboardView(LoginRequiredMixin, TemplateView):
+    """Dashboard stock avec vue d'ensemble"""
+    template_name = 'crm/stock_dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Produits avec stock
+        products = Product.objects.filter(is_active=True)
+        context['products'] = products
+        
+        # Alertes stock bas
+        context['low_stock'] = products.filter(
+            stock_quantity__lte=F('alert_threshold')
+        )
+        
+        # Expéditions en transit
+        context['shipments_in_transit'] = Shipment.objects.filter(
+            status__in=[ShipmentStatus.SHIPPED, ShipmentStatus.IN_TRANSIT]
+        )
+        
+        # Stock en transit
+        transit_items = ShipmentItem.objects.filter(
+            shipment__status__in=[ShipmentStatus.SHIPPED, ShipmentStatus.IN_TRANSIT]
+        ).values('product__name', 'product__code').annotate(
+            total=Sum('quantity')
+        )
+        context['stock_in_transit'] = transit_items
+        
+        # Pré-commandes en attente
+        context['pending_preorders'] = PreOrder.objects.filter(status=PreOrderStatus.PENDING).count()
+        
+        # Réservations actives
+        context['active_reservations'] = StockReservation.objects.filter(is_active=True).aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+        
+        # Totaux
+        context['total_stock'] = products.aggregate(total=Sum('stock_quantity'))['total'] or 0
+        
+        return context
+
+
+class StockMovementListView(LoginRequiredMixin, ListView):
+    """Historique des mouvements de stock"""
+    model = StockMovement
+    template_name = 'crm/stock_movements.html'
+    context_object_name = 'movements'
+    paginate_by = 50
+    
+    def get_queryset(self):
+        qs = StockMovement.objects.select_related('product', 'shipment', 'order')
+        product = self.request.GET.get('product')
+        if product:
+            qs = qs.filter(product_id=product)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['products'] = Product.objects.filter(is_active=True)
+        return context
+
+
+class ShipmentListView(LoginRequiredMixin, ListView):
+    """Liste des expéditions"""
+    model = Shipment
+    template_name = 'crm/shipment_list.html'
+    context_object_name = 'shipments'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = Shipment.objects.prefetch_related('items__product')
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = ShipmentStatus.choices
+        return context
+
+
+class ShipmentCreateView(LoginRequiredMixin, CreateView):
+    """Créer une nouvelle expédition"""
+    model = Shipment
+    template_name = 'crm/shipment_form.html'
+    fields = ['departure_date', 'estimated_arrival', 'transporter', 'vehicle_info', 'notes']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['products'] = Product.objects.filter(is_active=True)
+        return context
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        self.object = form.save()
+        
+        # Traiter les lignes d'expédition
+        products = self.request.POST.getlist('item_product')
+        quantities = self.request.POST.getlist('item_quantity')
+        
+        for i, product_id in enumerate(products):
+            if product_id and i < len(quantities):
+                try:
+                    product = Product.objects.get(pk=product_id)
+                    qty = Decimal(quantities[i])
+                    if qty > 0:
+                        ShipmentItem.objects.create(
+                            shipment=self.object,
+                            product=product,
+                            quantity=qty
+                        )
+                except (Product.DoesNotExist, ValueError):
+                    continue
+        
+        messages.success(self.request, f'Expédition {self.object.reference} créée')
+        return redirect('crm:shipment_detail', pk=self.object.pk)
+
+
+class ShipmentDetailView(LoginRequiredMixin, DetailView):
+    model = Shipment
+    template_name = 'crm/shipment_detail.html'
+    context_object_name = 'shipment'
+
+
+class ShipmentShipView(LoginRequiredMixin, View):
+    """Marquer une expédition comme expédiée"""
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk)
+        if shipment.status == ShipmentStatus.PREPARING:
+            shipment.status = ShipmentStatus.SHIPPED
+            shipment.departure_date = timezone.now().date()
+            shipment.save()
+            messages.success(request, f'Expédition {shipment.reference} marquée comme expédiée')
+        return redirect('crm:shipment_detail', pk=pk)
+
+
+class ShipmentReceiveView(LoginRequiredMixin, View):
+    """Réceptionner une expédition"""
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk)
+        if shipment.status in [ShipmentStatus.SHIPPED, ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED]:
+            shipment.receive(request.user)
+            messages.success(request, f'Expédition {shipment.reference} réceptionnée. Stock mis à jour.')
+        return redirect('crm:shipment_detail', pk=pk)
+
+
+class PreOrderListView(LoginRequiredMixin, ListView):
+    """Liste des pré-commandes"""
+    model = PreOrder
+    template_name = 'crm/preorder_list.html'
+    context_object_name = 'preorders'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = PreOrder.objects.select_related('customer', 'product', 'target_shipment')
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['products'] = Product.objects.filter(is_active=True)
+        return context
+
+
+class PreOrderCreateView(LoginRequiredMixin, CreateView):
+    """Créer une pré-commande"""
+    model = PreOrder
+    template_name = 'crm/preorder_form.html'
+    fields = ['customer', 'product', 'quantity', 'target_shipment', 'notes']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['customers'] = Customer.objects.filter(is_active=True)
+        context['products'] = Product.objects.filter(is_active=True)
+        context['shipments'] = Shipment.objects.filter(
+            status__in=[ShipmentStatus.PREPARING, ShipmentStatus.SHIPPED, ShipmentStatus.IN_TRANSIT]
+        )
+        return context
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, 'Pré-commande créée')
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('crm:preorder_list')
+
+
+class PreOrderAllocateView(LoginRequiredMixin, View):
+    """Allouer du stock aux pré-commandes par priorité"""
+    def post(self, request):
+        product_id = request.POST.get('product')
+        
+        if not product_id:
+            messages.error(request, 'Sélectionnez un produit')
+            return redirect('crm:preorder_list')
+        
+        product = get_object_or_404(Product, pk=product_id)
+        available_stock = product.stock_quantity
+        
+        # Récupérer les pré-commandes en attente par priorité décroissante
+        preorders = PreOrder.objects.filter(
+            product=product,
+            status=PreOrderStatus.PENDING
+        ).order_by('-priority', 'created_at')
+        
+        allocated_count = 0
+        for preorder in preorders:
+            remaining = preorder.remaining_quantity
+            if remaining > 0 and available_stock >= remaining:
+                preorder.quantity_allocated = preorder.quantity
+                preorder.status = PreOrderStatus.ALLOCATED
+                preorder.save()
+                
+                # Créer réservation
+                StockReservation.objects.create(
+                    product=product,
+                    customer=preorder.customer,
+                    quantity=remaining,
+                    reservation_type='preorder',
+                    preorder=preorder,
+                    created_by=request.user
+                )
+                
+                available_stock -= remaining
+                allocated_count += 1
+            elif remaining > 0 and available_stock > 0:
+                # Allocation partielle
+                preorder.quantity_allocated += available_stock
+                preorder.save()
+                
+                StockReservation.objects.create(
+                    product=product,
+                    customer=preorder.customer,
+                    quantity=available_stock,
+                    reservation_type='preorder',
+                    preorder=preorder,
+                    created_by=request.user
+                )
+                available_stock = 0
+                break
+        
+        messages.success(request, f'{allocated_count} pré-commande(s) allouée(s)')
+        return redirect('crm:preorder_list')
+
+
+class InventoryListView(LoginRequiredMixin, ListView):
+    """Liste des contrôles d'inventaire"""
+    model = InventoryControl
+    template_name = 'crm/inventory_list.html'
+    context_object_name = 'inventories'
+    paginate_by = 20
+
+
+class InventoryCreateView(LoginRequiredMixin, View):
+    """Créer un nouveau contrôle d'inventaire"""
+    def get(self, request):
+        return render(request, 'crm/inventory_form.html', {
+            'products': Product.objects.filter(is_active=True)
+        })
+    
+    def post(self, request):
+        name = request.POST.get('name', 'Inventaire')
+        control_date = request.POST.get('control_date', timezone.now().date())
+        
+        inventory = InventoryControl.objects.create(
+            name=name,
+            control_date=control_date,
+            created_by=request.user
+        )
+        
+        # Créer les lignes pour tous les produits actifs
+        for product in Product.objects.filter(is_active=True):
+            InventoryLine.objects.create(
+                inventory=inventory,
+                product=product,
+                theoretical_quantity=product.stock_quantity
+            )
+        
+        messages.success(request, f'Inventaire {inventory.reference} créé')
+        return redirect('crm:inventory_detail', pk=inventory.pk)
+
+
+class InventoryDetailView(LoginRequiredMixin, DetailView):
+    model = InventoryControl
+    template_name = 'crm/inventory_detail.html'
+    context_object_name = 'inventory'
+    
+    def post(self, request, pk):
+        """Mettre à jour les quantités physiques"""
+        inventory = self.get_object()
+        
+        if inventory.status != InventoryControlStatus.DRAFT:
+            messages.error(request, 'Cet inventaire ne peut plus être modifié')
+            return redirect('crm:inventory_detail', pk=pk)
+        
+        # Mettre à jour les quantités physiques
+        for line in inventory.lines.all():
+            qty = request.POST.get(f'qty_{line.pk}')
+            if qty:
+                try:
+                    line.physical_quantity = Decimal(qty)
+                    line.save()
+                except (ValueError, InvalidOperation):
+                    pass
+        
+        inventory.status = InventoryControlStatus.IN_PROGRESS
+        inventory.save()
+        
+        messages.success(request, 'Quantités enregistrées')
+        return redirect('crm:inventory_detail', pk=pk)
+
+
+class InventoryValidateView(LoginRequiredMixin, View):
+    """Valider un inventaire et appliquer les ajustements"""
+    def post(self, request, pk):
+        inventory = get_object_or_404(InventoryControl, pk=pk)
+        
+        if inventory.status not in [InventoryControlStatus.DRAFT, InventoryControlStatus.IN_PROGRESS]:
+            messages.error(request, 'Cet inventaire ne peut pas être validé')
+            return redirect('crm:inventory_detail', pk=pk)
+        
+        inventory.validate(request.user)
+        messages.success(request, f'Inventaire {inventory.reference} validé. Stock ajusté.')
+        return redirect('crm:inventory_detail', pk=pk)
+
+
 # Import models for F expression
 from django.db import models
 from django.urls import reverse

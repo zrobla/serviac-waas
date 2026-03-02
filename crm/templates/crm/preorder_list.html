@@ -1,0 +1,165 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Pré-commandes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history me-2"></i>Pré-commandes</h2>
+    <a href="{% url 'crm:preorder_create' %}" class="btn btn-success">
+        <i class="bi bi-plus-lg me-1"></i>Nouvelle pré-commande
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="mb-0">{{ preorders.count }}</h3>
+                <small class="text-muted">Total</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Statut</label>
+                <select name="status" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="PENDING" {% if request.GET.status == 'PENDING' %}selected{% endif %}>En attente</option>
+                    <option value="ALLOCATED" {% if request.GET.status == 'ALLOCATED' %}selected{% endif %}>Allouée</option>
+                    <option value="FULFILLED" {% if request.GET.status == 'FULFILLED' %}selected{% endif %}>Honorée</option>
+                    <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Annulée</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Filtrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Allocation automatique -->
+<div class="card mb-4 border-info">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-magic me-2"></i>Allocation intelligente</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">Allouer automatiquement le stock disponible aux pré-commandes en attente, par ordre de priorité client.</p>
+        <form method="post" action="{% url 'crm:preorder_allocate' %}" class="row g-3 align-items-end">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label class="form-label">Produit à allouer</label>
+                <select name="product" class="form-select" required>
+                    <option value="">-- Sélectionner --</option>
+                    {% for product in products %}
+                    <option value="{{ product.pk }}">{{ product.name }} (Stock: {{ product.stock_quantity|floatformat:0 }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-info">
+                    <i class="bi bi-lightning me-1"></i>Allouer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Client</th>
+                    <th>Produit</th>
+                    <th class="text-center">Quantité</th>
+                    <th class="text-center">Allouée</th>
+                    <th class="text-center">Priorité</th>
+                    <th>Expédition cible</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for preorder in preorders %}
+                <tr>
+                    <td>
+                        <a href="{% url 'crm:customer_detail' preorder.customer.pk %}">
+                            <strong>{{ preorder.customer.name }}</strong>
+                        </a>
+                        {% if preorder.customer.score %}
+                        <br><small class="text-muted">Score: {{ preorder.customer.score.final_score }}/100</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ preorder.product.name }}</td>
+                    <td class="text-center">{{ preorder.quantity|floatformat:0 }}</td>
+                    <td class="text-center">
+                        {% if preorder.quantity_allocated > 0 %}
+                        <span class="badge bg-success">{{ preorder.quantity_allocated|floatformat:0 }}</span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-primary">{{ preorder.priority }}</span>
+                    </td>
+                    <td>
+                        {% if preorder.target_shipment %}
+                        <a href="{% url 'crm:shipment_detail' preorder.target_shipment.pk %}">
+                            {{ preorder.target_shipment.reference }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if preorder.status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark">En attente</span>
+                        {% elif preorder.status == 'ALLOCATED' %}
+                        <span class="badge bg-info">Allouée</span>
+                        {% elif preorder.status == 'FULFILLED' %}
+                        <span class="badge bg-success">Honorée</span>
+                        {% elif preorder.status == 'CANCELLED' %}
+                        <span class="badge bg-secondary">Annulée</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ preorder.created_at|date:"d/m/Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        Aucune pré-commande
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Précédent</a>
+        </li>
+        {% endif %}
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

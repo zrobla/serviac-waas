@@ -1,0 +1,97 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Contrôles d'inventaire{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clipboard-check me-2"></i>Contrôles d'inventaire</h2>
+    <a href="{% url 'crm:inventory_create' %}" class="btn btn-success">
+        <i class="bi bi-plus-lg me-1"></i>Nouveau contrôle
+    </a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Référence</th>
+                    <th>Nom</th>
+                    <th>Date contrôle</th>
+                    <th class="text-center">Lignes</th>
+                    <th class="text-center">Écarts</th>
+                    <th>Statut</th>
+                    <th>Créé par</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inventory in inventories %}
+                <tr>
+                    <td>
+                        <a href="{% url 'crm:inventory_detail' inventory.pk %}">
+                            <strong>{{ inventory.reference }}</strong>
+                        </a>
+                    </td>
+                    <td>{{ inventory.name }}</td>
+                    <td>{{ inventory.control_date|date:"d/m/Y" }}</td>
+                    <td class="text-center">{{ inventory.lines.count }}</td>
+                    <td class="text-center">
+                        {% with discrepancies=inventory.total_discrepancies %}
+                        {% if discrepancies > 0 %}
+                        <span class="badge bg-danger">{{ discrepancies }}</span>
+                        {% else %}
+                        <span class="badge bg-success">0</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% if inventory.status == 'DRAFT' %}
+                        <span class="badge bg-secondary">Brouillon</span>
+                        {% elif inventory.status == 'IN_PROGRESS' %}
+                        <span class="badge bg-warning text-dark">En cours</span>
+                        {% elif inventory.status == 'VALIDATED' %}
+                        <span class="badge bg-success">Validé</span>
+                        {% elif inventory.status == 'CANCELLED' %}
+                        <span class="badge bg-dark">Annulé</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ inventory.created_by.get_full_name|default:inventory.created_by.username|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'crm:inventory_detail' inventory.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        Aucun contrôle d'inventaire
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Précédent</a>
+        </li>
+        {% endif %}
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

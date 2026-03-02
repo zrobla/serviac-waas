@@ -1,0 +1,206 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Gestion Stock{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-boxes me-2"></i>Gestion Stock</h2>
+    <div class="btn-group">
+        <a href="{% url 'crm:shipment_create' %}" class="btn btn-success">
+            <i class="bi bi-truck me-1"></i>Nouvelle expédition
+        </a>
+        <a href="{% url 'crm:inventory_create' %}" class="btn btn-outline-primary">
+            <i class="bi bi-clipboard-check me-1"></i>Inventaire
+        </a>
+    </div>
+</div>
+
+<!-- Stats rapides -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Stock total</h6>
+                        <h3 class="mb-0">{{ total_stock|floatformat:0 }}</h3>
+                    </div>
+                    <i class="bi bi-boxes fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">En transit</h6>
+                        <h3 class="mb-0">{{ shipments_in_transit.count }}</h3>
+                    </div>
+                    <i class="bi bi-truck fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Pré-commandes</h6>
+                        <h3 class="mb-0">{{ pending_preorders }}</h3>
+                    </div>
+                    <i class="bi bi-clock-history fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Alertes stock</h6>
+                        <h3 class="mb-0">{{ low_stock.count }}</h3>
+                    </div>
+                    <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Stock par produit -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-box me-2"></i>Stock par produit</h5>
+                <a href="{% url 'crm:stock_movements' %}" class="btn btn-sm btn-outline-secondary">
+                    Historique mouvements
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produit</th>
+                            <th class="text-center">En stock</th>
+                            <th class="text-center">Réservé</th>
+                            <th class="text-center">Disponible</th>
+                            <th class="text-center">Seuil alerte</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'crm:product_detail' product.pk %}">
+                                    <strong>{{ product.name }}</strong>
+                                </a>
+                                <br><small class="text-muted">{{ product.code }}</small>
+                            </td>
+                            <td class="text-center">{{ product.stock_quantity|floatformat:0 }}</td>
+                            <td class="text-center">-</td>
+                            <td class="text-center fw-bold">{{ product.stock_quantity|floatformat:0 }}</td>
+                            <td class="text-center">{{ product.alert_threshold }}</td>
+                            <td>
+                                {% if product.stock_quantity <= 0 %}
+                                <span class="badge bg-danger">Rupture</span>
+                                {% elif product.stock_quantity <= product.alert_threshold %}
+                                <span class="badge bg-warning text-dark">Stock bas</span>
+                                {% else %}
+                                <span class="badge bg-success">OK</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                Aucun produit
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Expéditions en transit -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-truck me-2"></i>En transit</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for shipment in shipments_in_transit %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'crm:shipment_detail' shipment.pk %}">
+                            {{ shipment.reference }}
+                        </a>
+                        <br><small class="text-muted">
+                            Départ: {{ shipment.departure_date|date:"d/m" }}
+                            {% if shipment.days_in_transit %}
+                            ({{ shipment.days_in_transit }}j)
+                            {% endif %}
+                        </small>
+                    </div>
+                    <span class="badge bg-warning text-dark">{{ shipment.total_quantity|floatformat:0 }} unités</span>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-center text-muted">
+                    Aucune expédition en transit
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="card-footer">
+                <a href="{% url 'crm:shipment_list' %}" class="btn btn-sm btn-outline-warning w-100">
+                    Voir toutes les expéditions
+                </a>
+            </div>
+        </div>
+        
+        <!-- Stock en transit détaillé -->
+        {% if stock_in_transit %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Stock en route</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for item in stock_in_transit %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>{{ item.product__name }}</span>
+                    <strong>{{ item.total|floatformat:0 }}</strong>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Alertes stock -->
+        {% if low_stock %}
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Alertes stock</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for product in low_stock %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        {{ product.name }}
+                        <br><small class="text-muted">Seuil: {{ product.alert_threshold }}</small>
+                    </div>
+                    <span class="badge bg-danger">{{ product.stock_quantity|floatformat:0 }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

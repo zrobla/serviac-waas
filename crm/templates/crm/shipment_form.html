@@ -1,0 +1,157 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Nouvelle Expédition{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-truck me-2"></i>Nouvelle Expédition</h2>
+    <a href="{% url 'crm:shipment_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Informations expédition -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Informations transport</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Date de départ</label>
+                            <input type="date" name="departure_date" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date d'arrivée estimée <span class="text-danger">*</span></label>
+                            <input type="date" name="estimated_arrival" class="form-control" required>
+                            <small class="text-muted">Généralement 2-3 semaines après le départ</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Transporteur</label>
+                            <input type="text" name="transporter" class="form-control" placeholder="Nom du transporteur">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Véhicule / Immatriculation</label>
+                            <input type="text" name="vehicle_info" class="form-control" placeholder="Plaque ou info véhicule">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Remarques optionnelles"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Produits à expédier -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Produits à expédier</h5>
+                    <button type="button" class="btn btn-sm btn-success" onclick="addLine()">
+                        <i class="bi bi-plus-lg me-1"></i>Ajouter ligne
+                    </button>
+                </div>
+                <div class="card-body">
+                    <table class="table" id="items-table">
+                        <thead>
+                            <tr>
+                                <th style="width:60%">Produit</th>
+                                <th>Quantité</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-body">
+                            <tr data-row="0">
+                                <td>
+                                    <select name="item_product" class="form-select" required>
+                                        <option value="">-- Sélectionner --</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.pk }}">{{ product.name }} ({{ product.code }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" name="item_quantity" class="form-control" 
+                                           min="0" step="0.01" required placeholder="Qté">
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLine(this)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Rappel</h5>
+                    <p class="card-text text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Les produits sont fabriqués au <strong>Sénégal</strong> et transportés vers la <strong>Côte d'Ivoire</strong>.
+                    </p>
+                    <p class="card-text text-muted">
+                        Temps de transit habituel: <strong>2 à 3 semaines</strong>
+                    </p>
+                    <hr>
+                    <p class="text-muted mb-0">
+                        À la réception, le stock sera automatiquement mis à jour.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-lg me-1"></i>Créer l'expédition
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+let rowCount = 1;
+
+function addLine() {
+    const tbody = document.getElementById('items-body');
+    const row = document.createElement('tr');
+    row.setAttribute('data-row', rowCount);
+    row.innerHTML = `
+        <td>
+            <select name="item_product" class="form-select" required>
+                <option value="">-- Sélectionner --</option>
+                {% for product in products %}
+                <option value="{{ product.pk }}">{{ product.name }} ({{ product.code }})</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="item_quantity" class="form-control" 
+                   min="0" step="0.01" required placeholder="Qté">
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLine(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(row);
+    rowCount++;
+}
+
+function removeLine(btn) {
+    const tbody = document.getElementById('items-body');
+    if (tbody.rows.length > 1) {
+        btn.closest('tr').remove();
+    }
+}
+</script>
+{% endblock %}

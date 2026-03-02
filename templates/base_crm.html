@@ -143,11 +143,26 @@
             </li>
             
             <li class="nav-item mt-3">
-                <span class="nav-link text-white-50 small text-uppercase">À venir</span>
+                <span class="nav-link text-white-50 small text-uppercase">Stock</span>
             </li>
             <li class="nav-item">
-                <a class="nav-link text-white-50" href="#">
-                    <i class="bi bi-boxes me-2"></i>Stock
+                <a class="nav-link {% if 'stock' in request.path and 'expeditions' not in request.path %}active{% endif %}" href="{% url 'crm:stock_dashboard' %}">
+                    <i class="bi bi-boxes me-2"></i>Dashboard Stock
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'expeditions' in request.path %}active{% endif %}" href="{% url 'crm:shipment_list' %}">
+                    <i class="bi bi-truck me-2"></i>Expéditions
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'precommandes' in request.path %}active{% endif %}" href="{% url 'crm:preorder_list' %}">
+                    <i class="bi bi-clock-history me-2"></i>Pré-commandes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'inventaires' in request.path %}active{% endif %}" href="{% url 'crm:inventory_list' %}">
+                    <i class="bi bi-clipboard-check me-2"></i>Inventaires
                 </a>
             </li>
         </ul>

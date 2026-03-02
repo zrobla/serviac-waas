@@ -63,6 +63,28 @@ urlpatterns = [
     # Balance âgée
     path('balance-agee/', views.AgedBalanceView.as_view(), name='aged_balance'),
     
+    # Stock (Phase 4)
+    path('stock/', views.StockDashboardView.as_view(), name='stock_dashboard'),
+    path('stock/mouvements/', views.StockMovementListView.as_view(), name='stock_movements'),
+    
+    # Shipments (Phase 4)
+    path('expeditions/', views.ShipmentListView.as_view(), name='shipment_list'),
+    path('expeditions/nouvelle/', views.ShipmentCreateView.as_view(), name='shipment_create'),
+    path('expeditions/<int:pk>/', views.ShipmentDetailView.as_view(), name='shipment_detail'),
+    path('expeditions/<int:pk>/expedier/', views.ShipmentShipView.as_view(), name='shipment_ship'),
+    path('expeditions/<int:pk>/receptionner/', views.ShipmentReceiveView.as_view(), name='shipment_receive'),
+    
+    # Pre-orders (Phase 4)
+    path('precommandes/', views.PreOrderListView.as_view(), name='preorder_list'),
+    path('precommandes/nouvelle/', views.PreOrderCreateView.as_view(), name='preorder_create'),
+    path('precommandes/allouer/', views.PreOrderAllocateView.as_view(), name='preorder_allocate'),
+    
+    # Inventory (Phase 4)
+    path('inventaires/', views.InventoryListView.as_view(), name='inventory_list'),
+    path('inventaires/nouveau/', views.InventoryCreateView.as_view(), name='inventory_create'),
+    path('inventaires/<int:pk>/', views.InventoryDetailView.as_view(), name='inventory_detail'),
+    path('inventaires/<int:pk>/valider/', views.InventoryValidateView.as_view(), name='inventory_validate'),
+    
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
     path('notifications/marquer-lues/', views.mark_notifications_read, name='mark_notifications_read'),

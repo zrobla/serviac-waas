@@ -856,3 +856,509 @@ class CashMovement(models.Model):
     def __str__(self):
         sign = '+' if self.movement_type == 'in' else '-'
         return f"{sign}{self.amount} FCFA - {self.reason}"
+
+
+# ============================================================
+# PHASE 4: GESTION STOCK INTELLIGENTE
+# ============================================================
+
+class ShipmentStatus(models.TextChoices):
+    PREPARING = 'preparing', 'En préparation'
+    SHIPPED = 'shipped', 'Expédié'
+    IN_TRANSIT = 'in_transit', 'En transit'
+    ARRIVED = 'arrived', 'Arrivé'
+    RECEIVED = 'received', 'Réceptionné'
+    CANCELLED = 'cancelled', 'Annulé'
+
+
+class Shipment(models.Model):
+    """Expédition de marchandises (Sénégal → Côte d'Ivoire)"""
+    # Identification
+    reference = models.CharField('Référence', max_length=30, unique=True, editable=False)
+    
+    # Dates
+    departure_date = models.DateField('Date départ', null=True, blank=True)
+    estimated_arrival = models.DateField('Arrivée estimée', null=True, blank=True)
+    actual_arrival = models.DateField('Arrivée réelle', null=True, blank=True)
+    
+    # Statut
+    status = models.CharField('Statut', max_length=20, choices=ShipmentStatus.choices, 
+                             default=ShipmentStatus.PREPARING)
+    
+    # Infos transport
+    transporter = models.CharField('Transporteur', max_length=100, blank=True)
+    vehicle_info = models.CharField('Véhicule/Conteneur', max_length=100, blank=True)
+    tracking_number = models.CharField('N° suivi', max_length=100, blank=True)
+    
+    # Origine/Destination
+    origin = models.CharField('Origine', max_length=100, default='Dakar, Sénégal')
+    destination = models.CharField('Destination', max_length=100, default='Abidjan, Côte d\'Ivoire')
+    
+    # Notes
+    notes = models.TextField('Notes', blank=True)
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='shipments_created')
+    
+    class Meta:
+        verbose_name = 'Expédition'
+        verbose_name_plural = 'Expéditions'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.reference} - {self.get_status_display()}"
+    
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = self.generate_reference()
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def generate_reference(cls):
+        today = timezone.now()
+        prefix = f"EXP-{today.strftime('%Y%m')}"
+        last = cls.objects.filter(reference__startswith=prefix).order_by('-reference').first()
+        if last:
+            last_num = int(last.reference.split('-')[-1])
+            return f"{prefix}-{last_num + 1:04d}"
+        return f"{prefix}-0001"
+    
+    @property
+    def total_quantity(self):
+        return sum(item.quantity for item in self.items.all())
+    
+    @property
+    def days_in_transit(self):
+        if self.departure_date and self.status in [ShipmentStatus.SHIPPED, ShipmentStatus.IN_TRANSIT]:
+            return (timezone.now().date() - self.departure_date).days
+        return None
+    
+    def receive(self, user):
+        """Réceptionne l'expédition et met à jour le stock"""
+        self.status = ShipmentStatus.RECEIVED
+        self.actual_arrival = timezone.now().date()
+        self.save()
+        
+        # Mettre à jour le stock pour chaque ligne
+        for item in self.items.all():
+            item.receive(user)
+
+
+class ShipmentItem(models.Model):
+    """Ligne d'expédition"""
+    shipment = models.ForeignKey(Shipment, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='shipment_items')
+    
+    quantity = models.DecimalField('Quantité', max_digits=12, decimal_places=2)
+    quantity_received = models.DecimalField('Quantité reçue', max_digits=12, decimal_places=2, default=0)
+    
+    notes = models.CharField('Notes', max_length=255, blank=True)
+    
+    class Meta:
+        verbose_name = 'Ligne expédition'
+        verbose_name_plural = 'Lignes expédition'
+    
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name}"
+    
+    def receive(self, user):
+        """Réceptionne cette ligne"""
+        self.quantity_received = self.quantity
+        self.save()
+        
+        # Créer le mouvement de stock
+        StockMovement.objects.create(
+            product=self.product,
+            movement_type='in',
+            quantity=self.quantity,
+            reason=f"Réception {self.shipment.reference}",
+            shipment=self.shipment,
+            created_by=user
+        )
+        
+        # Mettre à jour le stock produit
+        self.product.stock_quantity += self.quantity
+        self.product.save()
+
+
+class StockMovementType(models.TextChoices):
+    IN = 'in', 'Entrée'
+    OUT = 'out', 'Sortie'
+    ADJUSTMENT = 'adjustment', 'Ajustement'
+    TRANSFER = 'transfer', 'Transfert'
+    RETURN = 'return', 'Retour'
+
+
+class StockMovement(models.Model):
+    """Mouvement de stock"""
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='stock_movements')
+    
+    movement_type = models.CharField('Type', max_length=20, choices=StockMovementType.choices)
+    quantity = models.DecimalField('Quantité', max_digits=12, decimal_places=2)
+    
+    # Stock après mouvement
+    stock_after = models.DecimalField('Stock après', max_digits=12, decimal_places=2, null=True)
+    
+    # Raison/origine
+    reason = models.CharField('Motif', max_length=255)
+    
+    # Liens optionnels
+    shipment = models.ForeignKey(Shipment, on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_movements')
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_movements')
+    inventory_control = models.ForeignKey('InventoryControl', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Date', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        verbose_name = 'Mouvement de stock'
+        verbose_name_plural = 'Mouvements de stock'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        sign = '+' if self.movement_type == 'in' else '-'
+        return f"{sign}{self.quantity} {self.product.code}"
+    
+    def save(self, *args, **kwargs):
+        if self.stock_after is None:
+            self.stock_after = self.product.stock_quantity
+        super().save(*args, **kwargs)
+
+
+class CustomerScore(models.Model):
+    """Score client pour priorisation"""
+    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='score_detail')
+    
+    # Scores composants (0-100)
+    payment_score = models.IntegerField('Score paiement', default=50, 
+                                        help_text='Régularité des paiements')
+    volume_score = models.IntegerField('Score volume', default=50,
+                                       help_text='Volume d\'achat')
+    frequency_score = models.IntegerField('Score fréquence', default=50,
+                                          help_text='Fréquence des commandes')
+    loyalty_score = models.IntegerField('Score fidélité', default=50,
+                                        help_text='Ancienneté et régularité')
+    
+    # Score global calculé
+    auto_score = models.IntegerField('Score automatique', default=50)
+    
+    # Métriques
+    total_orders = models.IntegerField('Nb commandes', default=0)
+    total_amount = models.DecimalField('CA total', max_digits=14, decimal_places=2, default=0)
+    avg_payment_delay = models.IntegerField('Délai paiement moyen (j)', default=0)
+    last_order_date = models.DateField('Dernière commande', null=True, blank=True)
+    
+    # Mise à jour
+    last_calculated = models.DateTimeField('Dernier calcul', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Score client'
+        verbose_name_plural = 'Scores clients'
+    
+    def __str__(self):
+        return f"{self.customer.name} - Score: {self.final_score}/100"
+    
+    @property
+    def final_score(self):
+        """Score final combinant auto et manuel"""
+        manual = self.customer.manual_score * 10 if self.customer.manual_score else 50
+        return int((self.auto_score + manual) / 2)
+    
+    def calculate(self):
+        """Recalcule le score automatique"""
+        from django.db.models import Avg, Count, Sum
+        
+        # Récupérer les stats
+        orders = self.customer.orders.filter(status__in=[OrderStatus.DELIVERED, OrderStatus.INVOICED])
+        invoices = self.customer.invoices.all()
+        
+        # Volume
+        self.total_orders = orders.count()
+        self.total_amount = orders.aggregate(total=Sum('total'))['total'] or 0
+        
+        if self.total_orders > 0:
+            # Score volume (basé sur CA)
+            if self.total_amount >= 10000000:  # 10M+
+                self.volume_score = 100
+            elif self.total_amount >= 5000000:
+                self.volume_score = 80
+            elif self.total_amount >= 1000000:
+                self.volume_score = 60
+            else:
+                self.volume_score = 40
+            
+            # Score fréquence
+            last_order = orders.order_by('-created_at').first()
+            if last_order:
+                self.last_order_date = last_order.created_at.date()
+                days_since = (timezone.now().date() - self.last_order_date).days
+                if days_since <= 30:
+                    self.frequency_score = 100
+                elif days_since <= 60:
+                    self.frequency_score = 80
+                elif days_since <= 90:
+                    self.frequency_score = 60
+                else:
+                    self.frequency_score = 30
+            
+            # Score paiement
+            paid_invoices = invoices.filter(status=InvoiceStatus.PAID)
+            if paid_invoices.exists():
+                # Délai moyen de paiement (simplifié)
+                self.payment_score = 70  # À affiner avec les dates réelles
+            else:
+                self.payment_score = 50
+            
+            # Score fidélité (ancienneté)
+            first_order = orders.order_by('created_at').first()
+            if first_order:
+                months_active = (timezone.now().date() - first_order.created_at.date()).days / 30
+                if months_active >= 24:
+                    self.loyalty_score = 100
+                elif months_active >= 12:
+                    self.loyalty_score = 80
+                elif months_active >= 6:
+                    self.loyalty_score = 60
+                else:
+                    self.loyalty_score = 40
+        
+        # Calcul score global
+        self.auto_score = int(
+            (self.payment_score * 0.35) +
+            (self.volume_score * 0.25) +
+            (self.frequency_score * 0.25) +
+            (self.loyalty_score * 0.15)
+        )
+        
+        self.save()
+
+
+class PreOrderStatus(models.TextChoices):
+    PENDING = 'pending', 'En attente'
+    ALLOCATED = 'allocated', 'Alloué'
+    FULFILLED = 'fulfilled', 'Satisfait'
+    CANCELLED = 'cancelled', 'Annulé'
+
+
+class PreOrder(models.Model):
+    """Pré-commande sur arrivage futur"""
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='preorders')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='preorders')
+    
+    # Quantité demandée
+    quantity = models.DecimalField('Quantité', max_digits=12, decimal_places=2)
+    quantity_allocated = models.DecimalField('Quantité allouée', max_digits=12, decimal_places=2, default=0)
+    
+    # Expédition ciblée (optionnel)
+    target_shipment = models.ForeignKey(Shipment, on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name='preorders', verbose_name='Expédition ciblée')
+    
+    # Priorité (basée sur score client)
+    priority = models.IntegerField('Priorité', default=50, 
+                                   help_text='Plus élevé = plus prioritaire')
+    
+    # Statut
+    status = models.CharField('Statut', max_length=20, choices=PreOrderStatus.choices,
+                             default=PreOrderStatus.PENDING)
+    
+    # Notes
+    notes = models.TextField('Notes', blank=True)
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        verbose_name = 'Pré-commande'
+        verbose_name_plural = 'Pré-commandes'
+        ordering = ['-priority', 'created_at']
+    
+    def __str__(self):
+        return f"PRE-{self.pk} - {self.customer.name} - {self.quantity} x {self.product.code}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculer la priorité selon le score client
+        if hasattr(self.customer, 'score_detail'):
+            self.priority = self.customer.score_detail.final_score
+        elif self.customer.manual_score:
+            self.priority = self.customer.manual_score * 10
+        super().save(*args, **kwargs)
+    
+    @property
+    def remaining_quantity(self):
+        return self.quantity - self.quantity_allocated
+
+
+class StockReservationType(models.TextChoices):
+    ORDER = 'order', 'Commande'
+    PREORDER = 'preorder', 'Pré-commande'
+    HOLD = 'hold', 'Blocage'
+    CREDIT = 'credit', 'Avoir client (stock)'
+
+
+class StockReservation(models.Model):
+    """Réservation de stock"""
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='reservations')
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='stock_reservations')
+    
+    quantity = models.DecimalField('Quantité réservée', max_digits=12, decimal_places=2)
+    
+    reservation_type = models.CharField('Type', max_length=20, choices=StockReservationType.choices)
+    
+    # Liens optionnels
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_reservations')
+    preorder = models.ForeignKey(PreOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='reservations')
+    
+    # Validité
+    expiry_date = models.DateField('Date expiration', null=True, blank=True)
+    is_active = models.BooleanField('Active', default=True)
+    
+    # Notes
+    reason = models.CharField('Motif', max_length=255, blank=True)
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        verbose_name = 'Réservation stock'
+        verbose_name_plural = 'Réservations stock'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.quantity} x {self.product.code} pour {self.customer.name}"
+    
+    @property
+    def is_expired(self):
+        if self.expiry_date:
+            return timezone.now().date() > self.expiry_date
+        return False
+
+
+class InventoryControlStatus(models.TextChoices):
+    DRAFT = 'draft', 'Brouillon'
+    IN_PROGRESS = 'in_progress', 'En cours'
+    VALIDATED = 'validated', 'Validé'
+    CANCELLED = 'cancelled', 'Annulé'
+
+
+class InventoryControl(models.Model):
+    """Contrôle d'inventaire (virtuel vs physique)"""
+    # Identification
+    reference = models.CharField('Référence', max_length=30, unique=True, editable=False)
+    name = models.CharField('Nom', max_length=100, default='Inventaire')
+    
+    # Date
+    control_date = models.DateField('Date contrôle')
+    
+    # Statut
+    status = models.CharField('Statut', max_length=20, choices=InventoryControlStatus.choices,
+                             default=InventoryControlStatus.DRAFT)
+    
+    # Notes
+    notes = models.TextField('Notes', blank=True)
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='inventories_created')
+    validated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='inventories_validated')
+    validated_at = models.DateTimeField('Validé le', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Contrôle inventaire'
+        verbose_name_plural = 'Contrôles inventaire'
+        ordering = ['-control_date']
+    
+    def __str__(self):
+        return f"{self.reference} - {self.control_date}"
+    
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = self.generate_reference()
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def generate_reference(cls):
+        today = timezone.now()
+        prefix = f"INV-{today.strftime('%Y%m%d')}"
+        last = cls.objects.filter(reference__startswith=prefix).order_by('-reference').first()
+        if last:
+            last_num = int(last.reference.split('-')[-1])
+            return f"{prefix}-{last_num + 1:02d}"
+        return f"{prefix}-01"
+    
+    @property
+    def total_difference(self):
+        """Écart total (+ ou -)"""
+        return sum(line.difference for line in self.lines.all())
+    
+    @property
+    def has_differences(self):
+        return any(line.difference != 0 for line in self.lines.all())
+    
+    @property
+    def total_discrepancies(self):
+        """Nombre de lignes avec écart"""
+        return sum(1 for line in self.lines.all() if line.physical_quantity is not None and line.difference != 0)
+    
+    def validate(self, user):
+        """Valide l'inventaire et applique les ajustements"""
+        for line in self.lines.all():
+            if line.difference != 0:
+                # Créer mouvement d'ajustement
+                StockMovement.objects.create(
+                    product=line.product,
+                    movement_type='adjustment',
+                    quantity=line.difference,
+                    stock_after=line.physical_quantity,
+                    reason=f"Ajustement inventaire {self.reference}",
+                    inventory_control=self,
+                    created_by=user
+                )
+                
+                # Mettre à jour le stock
+                line.product.stock_quantity = line.physical_quantity
+                line.product.save()
+        
+        self.status = InventoryControlStatus.VALIDATED
+        self.validated_by = user
+        self.validated_at = timezone.now()
+        self.save()
+
+
+class InventoryLine(models.Model):
+    """Ligne de contrôle d'inventaire"""
+    inventory = models.ForeignKey(InventoryControl, on_delete=models.CASCADE, related_name='lines')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT)
+    
+    # Quantités
+    theoretical_quantity = models.DecimalField('Quantité théorique', max_digits=12, decimal_places=2)
+    physical_quantity = models.DecimalField('Quantité physique', max_digits=12, decimal_places=2, null=True, blank=True)
+    
+    # Notes
+    notes = models.CharField('Notes', max_length=255, blank=True)
+    
+    class Meta:
+        verbose_name = 'Ligne inventaire'
+        verbose_name_plural = 'Lignes inventaire'
+        unique_together = ['inventory', 'product']
+    
+    def __str__(self):
+        return f"{self.product.code}: {self.theoretical_quantity} → {self.physical_quantity or '?'}"
+    
+    @property
+    def difference(self):
+        if self.physical_quantity is not None:
+            return self.physical_quantity - self.theoretical_quantity
+        return Decimal('0')
+    
+    @property
+    def discrepancy(self):
+        """Alias pour difference"""
+        return self.difference
+    
+    @property
+    def has_difference(self):
+        return self.difference != 0

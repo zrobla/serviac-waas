@@ -1,0 +1,115 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Nouvelle Pré-commande{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history me-2"></i>Nouvelle Pré-commande</h2>
+    <a href="{% url 'crm:preorder_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Client <span class="text-danger">*</span></label>
+                            <select name="customer" class="form-select" required>
+                                <option value="">-- Sélectionner un client --</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.pk }}">
+                                    {{ customer.name }} ({{ customer.get_customer_type_display }})
+                                    {% if customer.score %} - Score: {{ customer.score.final_score }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <label class="form-label">Produit <span class="text-danger">*</span></label>
+                            <select name="product" class="form-select" required>
+                                <option value="">-- Sélectionner un produit --</option>
+                                {% for product in products %}
+                                <option value="{{ product.pk }}">
+                                    {{ product.name }} (Stock actuel: {{ product.stock_quantity|floatformat:0 }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Quantité <span class="text-danger">*</span></label>
+                            <input type="number" name="quantity" class="form-control" 
+                                   min="1" step="0.01" required placeholder="Quantité">
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label">Expédition cible (optionnel)</label>
+                            <select name="target_shipment" class="form-select">
+                                <option value="">-- Aucune expédition spécifique --</option>
+                                {% for shipment in shipments %}
+                                <option value="{{ shipment.pk }}">
+                                    {{ shipment.reference }} - ETA: {{ shipment.estimated_arrival|date:"d/m/Y" }}
+                                    ({{ shipment.get_status_display }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                Si spécifiée, la pré-commande sera liée à cette expédition entrante
+                            </small>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="Remarques optionnelles"></textarea>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'crm:preorder_list' %}" class="btn btn-outline-secondary">Annuler</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>Créer la pré-commande
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-info-circle me-2"></i>À propos</h5>
+                <p class="card-text">
+                    Les pré-commandes permettent de réserver du stock pour un client avant qu'il ne soit disponible.
+                </p>
+                <hr>
+                <h6>Priorité d'allocation</h6>
+                <p class="card-text text-muted small">
+                    La priorité est calculée automatiquement en fonction du score du client.
+                    Les clients avec un score élevé seront servis en premier lors de l'allocation automatique.
+                </p>
+                <hr>
+                <h6>Score client</h6>
+                <p class="card-text text-muted small">
+                    Le score prend en compte:
+                </p>
+                <ul class="small text-muted">
+                    <li>Fiabilité des paiements</li>
+                    <li>Volume des commandes</li>
+                    <li>Fréquence d'achat</li>
+                    <li>Ancienneté</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

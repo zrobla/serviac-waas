@@ -1,0 +1,176 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Expédition {{ shipment.reference }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-truck me-2"></i>{{ shipment.reference }}</h2>
+        <p class="text-muted mb-0">
+            Créée le {{ shipment.created_at|date:"d/m/Y H:i" }}
+            {% if shipment.created_by %} par {{ shipment.created_by.get_full_name|default:shipment.created_by.username }}{% endif %}
+        </p>
+    </div>
+    <a href="{% url 'crm:shipment_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Statut actuel -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    {% if shipment.status == 'PREPARING' %}
+                    <span class="badge bg-secondary fs-6 me-3">En préparation</span>
+                    {% elif shipment.status == 'SHIPPED' %}
+                    <span class="badge bg-info fs-6 me-3">Expédiée</span>
+                    {% elif shipment.status == 'IN_TRANSIT' %}
+                    <span class="badge bg-warning text-dark fs-6 me-3">En transit</span>
+                    {% elif shipment.status == 'ARRIVED' %}
+                    <span class="badge bg-primary fs-6 me-3">Arrivée</span>
+                    {% elif shipment.status == 'RECEIVED' %}
+                    <span class="badge bg-success fs-6 me-3">Réceptionnée</span>
+                    {% endif %}
+                    
+                    {% if shipment.days_in_transit %}
+                    <span class="text-muted">{{ shipment.days_in_transit }} jours en transit</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Barre de progression -->
+                <div class="progress" style="height: 30px;">
+                    <div class="progress-bar bg-secondary" style="width: 20%">
+                        <i class="bi bi-box-seam"></i> Préparation
+                    </div>
+                    <div class="progress-bar bg-info {% if shipment.status == 'PREPARING' %}bg-light text-muted{% endif %}" style="width: 20%">
+                        <i class="bi bi-truck"></i> Expédiée
+                    </div>
+                    <div class="progress-bar bg-warning {% if shipment.status in 'PREPARING,SHIPPED' %}bg-light text-muted{% endif %}" style="width: 20%">
+                        <i class="bi bi-geo-alt"></i> Transit
+                    </div>
+                    <div class="progress-bar bg-primary {% if shipment.status in 'PREPARING,SHIPPED,IN_TRANSIT' %}bg-light text-muted{% endif %}" style="width: 20%">
+                        <i class="bi bi-flag"></i> Arrivée
+                    </div>
+                    <div class="progress-bar bg-success {% if shipment.status != 'RECEIVED' %}bg-light text-muted{% endif %}" style="width: 20%">
+                        <i class="bi bi-check-lg"></i> Reçue
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Produits -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Produits expédiés</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produit</th>
+                            <th class="text-center">Quantité</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in shipment.items.all %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.product.name }}</strong>
+                                <br><small class="text-muted">{{ item.product.code }}</small>
+                            </td>
+                            <td class="text-center">{{ item.quantity|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center text-muted py-3">
+                                Aucun produit
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th>Total</th>
+                            <th class="text-center">{{ shipment.total_quantity|floatformat:0 }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Actions</h5>
+            </div>
+            <div class="card-body">
+                {% if shipment.status == 'PREPARING' %}
+                <form method="post" action="{% url 'crm:shipment_ship' shipment.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-info btn-lg" onclick="return confirm('Confirmer le départ de cette expédition ?')">
+                        <i class="bi bi-truck me-1"></i>Marquer comme expédiée
+                    </button>
+                </form>
+                {% elif shipment.status in 'SHIPPED,IN_TRANSIT,ARRIVED' %}
+                <form method="post" action="{% url 'crm:shipment_receive' shipment.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Confirmer la réception ? Le stock sera mis à jour.')">
+                        <i class="bi bi-check-lg me-1"></i>Réceptionner l'expédition
+                    </button>
+                </form>
+                {% elif shipment.status == 'RECEIVED' %}
+                <div class="alert alert-success mb-0">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Expédition réceptionnée le {{ shipment.arrival_date|date:"d/m/Y" }}
+                    {% if shipment.received_by %} par {{ shipment.received_by.get_full_name|default:shipment.received_by.username }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Informations -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Informations transport</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Date de départ</span>
+                    <strong>{{ shipment.departure_date|date:"d/m/Y"|default:"-" }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Arrivée prévue</span>
+                    <strong>{{ shipment.estimated_arrival|date:"d/m/Y"|default:"-" }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Arrivée réelle</span>
+                    <strong>{{ shipment.arrival_date|date:"d/m/Y"|default:"-" }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Transporteur</span>
+                    <strong>{{ shipment.transporter|default:"-" }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Véhicule</span>
+                    <strong>{{ shipment.vehicle_info|default:"-" }}</strong>
+                </li>
+            </ul>
+        </div>
+        
+        {% if shipment.notes %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Notes</h5>
+            </div>
+            <div class="card-body">
+                {{ shipment.notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
