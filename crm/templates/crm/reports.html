@@ -1,0 +1,189 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Rapports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-bar-graph me-2"></i>Rapports</h2>
+    <a href="{% url 'crm:kpi_dashboard' %}" class="btn btn-outline-primary">
+        <i class="bi bi-graph-up me-1"></i>Dashboard KPIs
+    </a>
+</div>
+
+<!-- Sélection période -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Période</label>
+                <select name="period" class="form-select">
+                    <option value="week" {% if period == 'week' %}selected{% endif %}>7 derniers jours</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>30 derniers jours</option>
+                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>90 derniers jours</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>365 derniers jours</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Actualiser</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="bi bi-calendar me-2"></i>
+    Période: <strong>{{ start_date|date:"d/m/Y" }}</strong> au <strong>{{ end_date|date:"d/m/Y" }}</strong>
+</div>
+
+<!-- Stats principales -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h4 class="mb-1">{{ orders_count }}</h4>
+                <small>Commandes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4 class="mb-1">{{ orders_total|floatformat:0 }}</h4>
+                <small>CA (FCFA)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h4 class="mb-1">{{ payments_total|floatformat:0 }}</h4>
+                <small>Encaissements (FCFA)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h4 class="mb-1">{{ new_customers }}</h4>
+                <small>Nouveaux clients</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Commandes par statut -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Commandes par statut</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Statut</th>
+                            <th class="text-center">Nombre</th>
+                            <th class="text-end">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in orders_by_status %}
+                        <tr>
+                            <td>
+                                {% if item.status == 'draft' %}
+                                <span class="badge bg-secondary">Brouillon</span>
+                                {% elif item.status == 'confirmed' %}
+                                <span class="badge bg-success">Confirmée</span>
+                                {% elif item.status == 'processing' %}
+                                <span class="badge bg-warning text-dark">En préparation</span>
+                                {% elif item.status == 'ready' %}
+                                <span class="badge bg-info">Prête</span>
+                                {% elif item.status == 'delivered' %}
+                                <span class="badge bg-primary">Livrée</span>
+                                {% elif item.status == 'invoiced' %}
+                                <span class="badge bg-dark">Facturée</span>
+                                {% elif item.status == 'cancelled' %}
+                                <span class="badge bg-danger">Annulée</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ item.count }}</td>
+                            <td class="text-end">{{ item.total|floatformat:0 }} FCFA</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">Aucune commande</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paiements par méthode -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-cash me-2"></i>Paiements par méthode</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Méthode</th>
+                            <th class="text-center">Nombre</th>
+                            <th class="text-end">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in payments_by_method %}
+                        <tr>
+                            <td>
+                                {% if item.method == 'cash' %}
+                                <i class="bi bi-cash me-1"></i>Espèces
+                                {% elif item.method == 'orange_money' %}
+                                <i class="bi bi-phone me-1"></i>Orange Money
+                                {% elif item.method == 'mtn_money' %}
+                                <i class="bi bi-phone me-1"></i>MTN Money
+                                {% elif item.method == 'moov_money' %}
+                                <i class="bi bi-phone me-1"></i>Moov Money
+                                {% elif item.method == 'wave' %}
+                                <i class="bi bi-phone me-1"></i>Wave
+                                {% elif item.method == 'bank_transfer' %}
+                                <i class="bi bi-bank me-1"></i>Virement
+                                {% elif item.method == 'check' %}
+                                <i class="bi bi-credit-card me-1"></i>Chèque
+                                {% else %}
+                                {{ item.method }}
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ item.count }}</td>
+                            <td class="text-end">{{ item.total|floatformat:0 }} FCFA</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">Aucun paiement</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Livraisons -->
+<div class="card">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5><i class="bi bi-truck me-2"></i>Livraisons effectuées</h5>
+            </div>
+            <div class="col-md-6 text-end">
+                <h3 class="text-success mb-0">{{ deliveries_count }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Dashboard KPIs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-graph-up me-2"></i>Dashboard Direction</h2>
+    <a href="{% url 'crm:reports' %}" class="btn btn-outline-primary">
+        <i class="bi bi-file-earmark-bar-graph me-1"></i>Rapports détaillés
+    </a>
+</div>
+
+<!-- KPIs du jour -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-white-50">Commandes aujourd'hui</h6>
+                        <h2 class="mb-0">{{ today.orders_count }}</h2>
+                        <small>{{ today.orders_amount|floatformat:0 }} FCFA</small>
+                    </div>
+                    <i class="bi bi-cart-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-white-50">Encaissements</h6>
+                        <h2 class="mb-0">{{ today.payments_received|floatformat:0 }}</h2>
+                        <small>FCFA</small>
+                    </div>
+                    <i class="bi bi-cash-stack fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="opacity-75">Créances en cours</h6>
+                        <h2 class="mb-0">{{ today.outstanding_debt|floatformat:0 }}</h2>
+                        <small>FCFA</small>
+                    </div>
+                    <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-white-50">Livraisons</h6>
+                        <h2 class="mb-0">{{ today.deliveries_count }}</h2>
+                        <small>aujourd'hui</small>
+                    </div>
+                    <i class="bi bi-truck fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ligne 2 -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3 class="text-primary mb-1">{{ total_customers }}</h3>
+                <small class="text-muted">Clients actifs</small>
+                <div class="mt-2">
+                    <span class="badge bg-success">+{{ today.new_customers }} nouveau(x)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3 class="text-primary mb-1">{{ pending_orders }}</h3>
+                <small class="text-muted">Commandes en cours</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3 class="text-primary mb-1">{{ today.stock_value|floatformat:0 }}</h3>
+                <small class="text-muted">Valeur stock (FCFA)</small>
+                {% if today.low_stock_products > 0 %}
+                <div class="mt-2">
+                    <span class="badge bg-danger">{{ today.low_stock_products }} alerte(s)</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 {% if pending_approvals > 0 %}border-warning{% endif %}">
+            <div class="card-body text-center">
+                <h3 class="text-primary mb-1">{{ pending_approvals }}</h3>
+                <small class="text-muted">Approbations en attente</small>
+                {% if pending_approvals > 0 %}
+                <div class="mt-2">
+                    <a href="{% url 'crm:approval_list' %}" class="btn btn-sm btn-warning">Voir</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top clients -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-trophy me-2"></i>Top 5 Clients (CA)</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Client</th>
+                            <th class="text-end">CA Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in top_customers %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'crm:customer_detail' customer.pk %}">
+                                    {{ customer.name }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ customer.total_ca|floatformat:0 }} FCFA</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">Aucune donnée</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top produits -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-star me-2"></i>Top 5 Produits (Ventes)</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Produit</th>
+                            <th class="text-end">Quantité vendue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in top_products %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'crm:product_detail' product.pk %}">
+                                    {{ product.name }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ product.total_sold|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">Aucune donnée</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historique semaine -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-calendar-week me-2"></i>Évolution 7 derniers jours</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th class="text-center">Commandes</th>
+                    <th class="text-end">CA</th>
+                    <th class="text-end">Encaissements</th>
+                    <th class="text-center">Livraisons</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for snap in week_snapshots %}
+                <tr>
+                    <td>{{ snap.date|date:"D d/m" }}</td>
+                    <td class="text-center">{{ snap.orders_count }}</td>
+                    <td class="text-end">{{ snap.orders_amount|floatformat:0 }}</td>
+                    <td class="text-end">{{ snap.payments_received|floatformat:0 }}</td>
+                    <td class="text-center">{{ snap.deliveries_count }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted">Aucune donnée historique</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1777,3 +1777,264 @@ def trigger_automation(event, context, user=None):
             logs.append(log)
     
     return logs
+
+
+# ============================================================
+# PHASE 7: GOUVERNANCE & REPORTING
+# ============================================================
+
+class AuditAction(models.TextChoices):
+    CREATE = 'create', 'Création'
+    UPDATE = 'update', 'Modification'
+    DELETE = 'delete', 'Suppression'
+    VIEW = 'view', 'Consultation'
+    APPROVE = 'approve', 'Approbation'
+    REJECT = 'reject', 'Rejet'
+    LOGIN = 'login', 'Connexion'
+    LOGOUT = 'logout', 'Déconnexion'
+
+
+class AuditLog(models.Model):
+    """Journal d'audit pour traçabilité complète"""
+    # Utilisateur
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
+    user_name = models.CharField('Nom utilisateur', max_length=100)  # Sauvegarde si user supprimé
+    
+    # Action
+    action = models.CharField('Action', max_length=20, choices=AuditAction.choices)
+    
+    # Objet concerné
+    model_name = models.CharField('Modèle', max_length=100)
+    object_id = models.CharField('ID objet', max_length=50, blank=True)
+    object_repr = models.CharField('Représentation', max_length=255)
+    
+    # Détails
+    changes = models.JSONField('Modifications', default=dict, blank=True)
+    ip_address = models.GenericIPAddressField('IP', null=True, blank=True)
+    
+    # Timestamp
+    created_at = models.DateTimeField('Date', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Log audit'
+        verbose_name_plural = 'Logs audit'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user_name} - {self.get_action_display()} - {self.model_name}"
+    
+    @classmethod
+    def log(cls, user, action, obj, changes=None, ip=None):
+        """Créer une entrée d'audit"""
+        return cls.objects.create(
+            user=user,
+            user_name=user.get_full_name() or user.username if user else 'Système',
+            action=action,
+            model_name=obj.__class__.__name__,
+            object_id=str(obj.pk) if obj.pk else '',
+            object_repr=str(obj)[:255],
+            changes=changes or {},
+            ip_address=ip
+        )
+
+
+class ApprovalStatus(models.TextChoices):
+    PENDING = 'pending', 'En attente'
+    APPROVED = 'approved', 'Approuvé'
+    REJECTED = 'rejected', 'Rejeté'
+
+
+class ApprovalRequest(models.Model):
+    """Demande d'approbation pour montants élevés"""
+    # Objet concerné
+    content_type = models.CharField('Type', max_length=50)  # Order, Credit, etc.
+    object_id = models.PositiveIntegerField('ID objet')
+    
+    # Détails
+    description = models.TextField('Description')
+    amount = models.DecimalField('Montant', max_digits=15, decimal_places=2, null=True, blank=True)
+    
+    # Demandeur
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                     related_name='approval_requests')
+    requested_at = models.DateTimeField('Demandé le', auto_now_add=True)
+    
+    # Approbation
+    status = models.CharField('Statut', max_length=20, choices=ApprovalStatus.choices,
+                             default=ApprovalStatus.PENDING)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='approvals_given')
+    approved_at = models.DateTimeField('Traité le', null=True, blank=True)
+    approval_notes = models.TextField('Notes approbation', blank=True)
+    
+    class Meta:
+        verbose_name = 'Demande approbation'
+        verbose_name_plural = 'Demandes approbation'
+        ordering = ['-requested_at']
+    
+    def __str__(self):
+        return f"{self.content_type} #{self.object_id} - {self.get_status_display()}"
+    
+    def approve(self, user, notes=''):
+        """Approuver la demande"""
+        self.status = ApprovalStatus.APPROVED
+        self.approved_by = user
+        self.approved_at = timezone.now()
+        self.approval_notes = notes
+        self.save()
+        
+        # Log audit
+        AuditLog.log(user, AuditAction.APPROVE, self)
+    
+    def reject(self, user, notes=''):
+        """Rejeter la demande"""
+        self.status = ApprovalStatus.REJECTED
+        self.approved_by = user
+        self.approved_at = timezone.now()
+        self.approval_notes = notes
+        self.save()
+        
+        # Log audit
+        AuditLog.log(user, AuditAction.REJECT, self)
+
+
+class UserRole(models.TextChoices):
+    ADMIN = 'admin', 'Administrateur'
+    DIRECTOR = 'director', 'Direction'
+    COMMERCIAL = 'commercial', 'Commercial'
+    CASHIER = 'cashier', 'Caissier(e)'
+    WAREHOUSE = 'warehouse', 'Magasinier'
+    ACCOUNTANT = 'accountant', 'Comptable'
+
+
+class UserProfile(models.Model):
+    """Profil utilisateur étendu avec rôle"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField('Rôle', max_length=20, choices=UserRole.choices,
+                           default=UserRole.COMMERCIAL)
+    
+    # Limites
+    approval_limit = models.DecimalField('Limite approbation', max_digits=15, decimal_places=2,
+                                        default=0, help_text='Montant max qu\'il peut approuver')
+    
+    # Préférences
+    phone = models.CharField('Téléphone', max_length=20, blank=True)
+    
+    class Meta:
+        verbose_name = 'Profil utilisateur'
+        verbose_name_plural = 'Profils utilisateurs'
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_role_display()}"
+    
+    @property
+    def can_approve(self):
+        return self.role in [UserRole.ADMIN, UserRole.DIRECTOR]
+    
+    @property
+    def can_manage_cash(self):
+        return self.role in [UserRole.ADMIN, UserRole.DIRECTOR, UserRole.CASHIER, UserRole.ACCOUNTANT]
+    
+    @property
+    def can_manage_stock(self):
+        return self.role in [UserRole.ADMIN, UserRole.DIRECTOR, UserRole.WAREHOUSE]
+    
+    def has_permission(self, permission):
+        """Vérifier une permission spécifique"""
+        permissions = {
+            UserRole.ADMIN: ['all'],
+            UserRole.DIRECTOR: ['view_all', 'approve', 'reports', 'kpis'],
+            UserRole.COMMERCIAL: ['customers', 'orders', 'invoices'],
+            UserRole.CASHIER: ['cash', 'payments'],
+            UserRole.WAREHOUSE: ['stock', 'delivery', 'inventory'],
+            UserRole.ACCOUNTANT: ['finance', 'reports', 'payments'],
+        }
+        user_perms = permissions.get(self.role, [])
+        return 'all' in user_perms or permission in user_perms
+
+
+class KPISnapshot(models.Model):
+    """Snapshot journalier des KPIs"""
+    date = models.DateField('Date', unique=True)
+    
+    # Ventes
+    orders_count = models.PositiveIntegerField('Nombre commandes', default=0)
+    orders_amount = models.DecimalField('Montant commandes', max_digits=15, decimal_places=2, default=0)
+    
+    # Clients
+    new_customers = models.PositiveIntegerField('Nouveaux clients', default=0)
+    active_customers = models.PositiveIntegerField('Clients actifs', default=0)
+    
+    # Finance
+    payments_received = models.DecimalField('Encaissements', max_digits=15, decimal_places=2, default=0)
+    outstanding_debt = models.DecimalField('Créances en cours', max_digits=15, decimal_places=2, default=0)
+    
+    # Stock
+    stock_value = models.DecimalField('Valeur stock', max_digits=15, decimal_places=2, default=0)
+    low_stock_products = models.PositiveIntegerField('Produits stock bas', default=0)
+    
+    # Livraisons
+    deliveries_count = models.PositiveIntegerField('Livraisons', default=0)
+    
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Snapshot KPI'
+        verbose_name_plural = 'Snapshots KPI'
+        ordering = ['-date']
+    
+    def __str__(self):
+        return f"KPIs {self.date}"
+    
+    @classmethod
+    def capture(cls, date=None):
+        """Capturer les KPIs du jour"""
+        if date is None:
+            date = timezone.now().date()
+        
+        snapshot, created = cls.objects.get_or_create(date=date)
+        
+        # Commandes du jour
+        day_orders = Order.objects.filter(created_at__date=date)
+        snapshot.orders_count = day_orders.count()
+        snapshot.orders_amount = day_orders.aggregate(total=Sum('total'))['total'] or 0
+        
+        # Nouveaux clients
+        snapshot.new_customers = Customer.objects.filter(created_at__date=date).count()
+        
+        # Clients actifs (commande dans les 30 derniers jours)
+        thirty_days_ago = date - timedelta(days=30)
+        snapshot.active_customers = Customer.objects.filter(
+            orders__created_at__gte=thirty_days_ago
+        ).distinct().count()
+        
+        # Paiements du jour
+        day_payments = Payment.objects.filter(payment_date__date=date)
+        snapshot.payments_received = day_payments.aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Créances totales
+        snapshot.outstanding_debt = Customer.objects.filter(
+            balance__gt=0
+        ).aggregate(total=Sum('balance'))['total'] or 0
+        
+        # Stock
+        products = Product.objects.filter(is_active=True)
+        snapshot.stock_value = sum(
+            p.stock_quantity * p.price_b2b for p in products
+        )
+        snapshot.low_stock_products = products.filter(
+            stock_quantity__lte=F('alert_threshold')
+        ).count()
+        
+        # Livraisons
+        snapshot.deliveries_count = DeliveryNote.objects.filter(
+            delivery_date__date=date,
+            status=DeliveryNoteStatus.DELIVERED
+        ).count()
+        
+        snapshot.save()
+        return snapshot

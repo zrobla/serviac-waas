@@ -1392,6 +1392,224 @@ class AutomationRuleToggleView(LoginRequiredMixin, View):
         return redirect('crm:automation_list')
 
 
+# ============================================================
+# PHASE 7: GOUVERNANCE & REPORTING
+# ============================================================
+
+from .models import (AuditLog, AuditAction, ApprovalRequest, ApprovalStatus,
+                     UserProfile, UserRole, KPISnapshot)
+
+
+class KPIDashboardView(LoginRequiredMixin, TemplateView):
+    """Dashboard KPIs direction"""
+    template_name = 'crm/kpi_dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.now().date()
+        
+        # Capturer les KPIs du jour
+        snapshot = KPISnapshot.capture(today)
+        context['today'] = snapshot
+        
+        # Historique 7 derniers jours
+        week_ago = today - timedelta(days=7)
+        context['week_snapshots'] = KPISnapshot.objects.filter(date__gte=week_ago)
+        
+        # Statistiques temps réel
+        context['total_customers'] = Customer.objects.filter(is_active=True).count()
+        context['total_products'] = Product.objects.filter(is_active=True).count()
+        
+        # Commandes en cours
+        context['pending_orders'] = Order.objects.filter(
+            status__in=[OrderStatus.DRAFT, OrderStatus.CONFIRMED, OrderStatus.PROCESSING]
+        ).count()
+        
+        # Top 5 clients par CA
+        context['top_customers'] = Customer.objects.annotate(
+            total_ca=Sum('orders__total')
+        ).filter(total_ca__gt=0).order_by('-total_ca')[:5]
+        
+        # Produits les plus vendus
+        context['top_products'] = Product.objects.annotate(
+            total_sold=Sum('orderitem__quantity')
+        ).filter(total_sold__gt=0).order_by('-total_sold')[:5]
+        
+        # Approbations en attente
+        context['pending_approvals'] = ApprovalRequest.objects.filter(
+            status=ApprovalStatus.PENDING
+        ).count()
+        
+        return context
+
+
+class AuditLogListView(LoginRequiredMixin, ListView):
+    """Journal d'audit"""
+    model = AuditLog
+    template_name = 'crm/audit_log.html'
+    context_object_name = 'logs'
+    paginate_by = 100
+    
+    def get_queryset(self):
+        qs = AuditLog.objects.select_related('user')
+        action = self.request.GET.get('action')
+        if action:
+            qs = qs.filter(action=action)
+        model = self.request.GET.get('model')
+        if model:
+            qs = qs.filter(model_name=model)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['action_choices'] = AuditAction.choices
+        context['models'] = AuditLog.objects.values_list('model_name', flat=True).distinct()
+        return context
+
+
+class ApprovalListView(LoginRequiredMixin, ListView):
+    """Liste des demandes d'approbation"""
+    model = ApprovalRequest
+    template_name = 'crm/approval_list.html'
+    context_object_name = 'approvals'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = ApprovalRequest.objects.select_related('requested_by', 'approved_by')
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        else:
+            # Par défaut: en attente
+            qs = qs.filter(status=ApprovalStatus.PENDING)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = ApprovalStatus.choices
+        return context
+
+
+class ApprovalActionView(LoginRequiredMixin, View):
+    """Approuver ou rejeter une demande"""
+    def post(self, request, pk):
+        approval = get_object_or_404(ApprovalRequest, pk=pk)
+        action = request.POST.get('action')
+        notes = request.POST.get('notes', '')
+        
+        if action == 'approve':
+            approval.approve(request.user, notes)
+            messages.success(request, 'Demande approuvée')
+        elif action == 'reject':
+            approval.reject(request.user, notes)
+            messages.warning(request, 'Demande rejetée')
+        
+        return redirect('crm:approval_list')
+
+
+class UserProfileListView(LoginRequiredMixin, ListView):
+    """Gestion des utilisateurs et rôles"""
+    model = UserProfile
+    template_name = 'crm/user_list.html'
+    context_object_name = 'profiles'
+    
+    def get_queryset(self):
+        # Créer profils manquants
+        for user in User.objects.filter(profile__isnull=True):
+            UserProfile.objects.create(user=user)
+        return UserProfile.objects.select_related('user')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['role_choices'] = UserRole.choices
+        return context
+
+
+class UserRoleUpdateView(LoginRequiredMixin, View):
+    """Modifier le rôle d'un utilisateur"""
+    def post(self, request, pk):
+        profile = get_object_or_404(UserProfile, pk=pk)
+        role = request.POST.get('role')
+        limit = request.POST.get('approval_limit', 0)
+        
+        if role in dict(UserRole.choices):
+            profile.role = role
+            try:
+                profile.approval_limit = Decimal(limit)
+            except:
+                pass
+            profile.save()
+            
+            # Log audit
+            AuditLog.log(request.user, AuditAction.UPDATE, profile, {
+                'role': role,
+                'approval_limit': str(profile.approval_limit)
+            })
+            
+            messages.success(request, f'Rôle de {profile.user.username} mis à jour')
+        
+        return redirect('crm:user_list')
+
+
+class ReportView(LoginRequiredMixin, TemplateView):
+    """Rapports et exports"""
+    template_name = 'crm/reports.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Période
+        period = self.request.GET.get('period', 'month')
+        today = timezone.now().date()
+        
+        if period == 'week':
+            start_date = today - timedelta(days=7)
+        elif period == 'month':
+            start_date = today - timedelta(days=30)
+        elif period == 'quarter':
+            start_date = today - timedelta(days=90)
+        elif period == 'year':
+            start_date = today - timedelta(days=365)
+        else:
+            start_date = today - timedelta(days=30)
+        
+        context['period'] = period
+        context['start_date'] = start_date
+        context['end_date'] = today
+        
+        # Ventes
+        orders = Order.objects.filter(created_at__date__gte=start_date)
+        context['orders_count'] = orders.count()
+        context['orders_total'] = orders.aggregate(total=Sum('total'))['total'] or 0
+        
+        # Par statut
+        context['orders_by_status'] = orders.values('status').annotate(
+            count=Count('id'),
+            total=Sum('total')
+        )
+        
+        # Paiements
+        payments = Payment.objects.filter(payment_date__date__gte=start_date)
+        context['payments_total'] = payments.aggregate(total=Sum('amount'))['total'] or 0
+        context['payments_by_method'] = payments.values('method').annotate(
+            count=Count('id'),
+            total=Sum('amount')
+        )
+        
+        # Clients
+        context['new_customers'] = Customer.objects.filter(
+            created_at__date__gte=start_date
+        ).count()
+        
+        # Livraisons
+        context['deliveries_count'] = DeliveryNote.objects.filter(
+            delivery_date__date__gte=start_date,
+            status=DeliveryNoteStatus.DELIVERED
+        ).count()
+        
+        return context
+
+
 # Import models for F expression
 from django.db import models
 from django.urls import reverse

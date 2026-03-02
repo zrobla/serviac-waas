@@ -103,6 +103,15 @@ urlpatterns = [
     path('emails/automatisations/', views.AutomationRuleListView.as_view(), name='automation_list'),
     path('emails/automatisations/<int:pk>/toggle/', views.AutomationRuleToggleView.as_view(), name='automation_toggle'),
     
+    # Gouvernance (Phase 7)
+    path('kpis/', views.KPIDashboardView.as_view(), name='kpi_dashboard'),
+    path('rapports/', views.ReportView.as_view(), name='reports'),
+    path('audit/', views.AuditLogListView.as_view(), name='audit_log'),
+    path('approbations/', views.ApprovalListView.as_view(), name='approval_list'),
+    path('approbations/<int:pk>/action/', views.ApprovalActionView.as_view(), name='approval_action'),
+    path('utilisateurs/', views.UserProfileListView.as_view(), name='user_list'),
+    path('utilisateurs/<int:pk>/role/', views.UserRoleUpdateView.as_view(), name='user_role_update'),
+    
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
     path('notifications/marquer-lues/', views.mark_notifications_read, name='mark_notifications_read'),
