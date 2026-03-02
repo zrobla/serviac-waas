@@ -1134,6 +1134,117 @@ class InventoryValidateView(LoginRequiredMixin, View):
         return redirect('crm:inventory_detail', pk=pk)
 
 
+# ============================================================
+# PHASE 5: LOGISTIQUE - BONS DE LIVRAISON
+# ============================================================
+
+from .models import DeliveryNote, DeliveryNoteItem, DeliveryNoteStatus
+
+
+class DeliveryNoteListView(LoginRequiredMixin, ListView):
+    """Liste des bons de livraison"""
+    model = DeliveryNote
+    template_name = 'crm/delivery_list.html'
+    context_object_name = 'deliveries'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = DeliveryNote.objects.select_related('customer', 'order')
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = DeliveryNoteStatus.choices
+        return context
+
+
+class DeliveryNoteCreateView(LoginRequiredMixin, View):
+    """Créer un BL depuis une commande"""
+    def get(self, request):
+        # Liste des commandes sans BL complet
+        orders = Order.objects.filter(
+            status__in=[OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.READY]
+        ).exclude(
+            delivery_notes__status=DeliveryNoteStatus.DELIVERED
+        ).select_related('customer')
+        return render(request, 'crm/delivery_form.html', {'orders': orders})
+    
+    def post(self, request):
+        order_id = request.POST.get('order')
+        if not order_id:
+            messages.error(request, 'Sélectionnez une commande')
+            return redirect('crm:delivery_create')
+        
+        order = get_object_or_404(Order, pk=order_id)
+        
+        # Créer le BL
+        delivery = DeliveryNote.create_from_order(order, request.user)
+        
+        # Copier adresse personnalisée si fournie
+        custom_address = request.POST.get('delivery_address')
+        if custom_address:
+            delivery.delivery_address = custom_address
+            delivery.save()
+        
+        messages.success(request, f'Bon de livraison {delivery.number} créé')
+        return redirect('crm:delivery_detail', pk=delivery.pk)
+
+
+class DeliveryNoteDetailView(LoginRequiredMixin, DetailView):
+    model = DeliveryNote
+    template_name = 'crm/delivery_detail.html'
+    context_object_name = 'delivery'
+
+
+class DeliveryNoteReadyView(LoginRequiredMixin, View):
+    """Marquer un BL prêt pour livraison"""
+    def post(self, request, pk):
+        delivery = get_object_or_404(DeliveryNote, pk=pk)
+        if delivery.status == DeliveryNoteStatus.DRAFT:
+            delivery.status = DeliveryNoteStatus.READY
+            delivery.save()
+            messages.success(request, f'BL {delivery.number} prêt pour livraison')
+        return redirect('crm:delivery_detail', pk=pk)
+
+
+class DeliveryNoteStartView(LoginRequiredMixin, View):
+    """Démarrer la livraison"""
+    def post(self, request, pk):
+        delivery = get_object_or_404(DeliveryNote, pk=pk)
+        if delivery.status in [DeliveryNoteStatus.DRAFT, DeliveryNoteStatus.READY]:
+            delivery.status = DeliveryNoteStatus.IN_DELIVERY
+            delivery.transporter = request.POST.get('transporter', '')
+            delivery.vehicle_info = request.POST.get('vehicle_info', '')
+            delivery.planned_date = timezone.now().date()
+            delivery.save()
+            messages.success(request, f'Livraison {delivery.number} démarrée')
+        return redirect('crm:delivery_detail', pk=pk)
+
+
+class DeliveryNoteDeliverView(LoginRequiredMixin, View):
+    """Confirmer la livraison"""
+    def post(self, request, pk):
+        delivery = get_object_or_404(DeliveryNote, pk=pk)
+        if delivery.status in [DeliveryNoteStatus.READY, DeliveryNoteStatus.IN_DELIVERY]:
+            received_by = request.POST.get('received_by', '')
+            delivery.mark_delivered(request.user, received_by)
+            messages.success(request, f'BL {delivery.number} livré avec succès')
+        return redirect('crm:delivery_detail', pk=pk)
+
+
+class DeliveryNotePDFView(LoginRequiredMixin, View):
+    """Générer le PDF du bon de livraison"""
+    def get(self, request, pk):
+        delivery = get_object_or_404(DeliveryNote, pk=pk)
+        return render(request, 'crm/delivery_pdf.html', {
+            'delivery': delivery,
+            'print_mode': True
+        })
+
+
 # Import models for F expression
 from django.db import models
 from django.urls import reverse

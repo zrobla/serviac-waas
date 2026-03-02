@@ -1362,3 +1362,172 @@ class InventoryLine(models.Model):
     @property
     def has_difference(self):
         return self.difference != 0
+
+
+# ============================================================
+# PHASE 5: LOGISTIQUE - BONS DE LIVRAISON
+# ============================================================
+
+class DeliveryNoteStatus(models.TextChoices):
+    DRAFT = 'draft', 'Brouillon'
+    READY = 'ready', 'Prêt pour livraison'
+    IN_DELIVERY = 'in_delivery', 'En cours de livraison'
+    DELIVERED = 'delivered', 'Livré'
+    CANCELLED = 'cancelled', 'Annulé'
+
+
+class DeliveryNote(models.Model):
+    """Bon de livraison"""
+    # Identification
+    number = models.CharField('Numéro BL', max_length=30, unique=True, editable=False)
+    
+    # Relations
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='delivery_notes')
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='delivery_notes')
+    
+    # Adresse livraison
+    delivery_address = models.TextField('Adresse de livraison', blank=True)
+    delivery_contact = models.CharField('Contact livraison', max_length=100, blank=True)
+    delivery_phone = models.CharField('Téléphone livraison', max_length=20, blank=True)
+    
+    # Dates
+    planned_date = models.DateField('Date prévue', null=True, blank=True)
+    delivery_date = models.DateTimeField('Date livraison effective', null=True, blank=True)
+    
+    # Transport
+    transporter = models.CharField('Transporteur', max_length=100, blank=True)
+    vehicle_info = models.CharField('Véhicule', max_length=100, blank=True)
+    
+    # Statut
+    status = models.CharField('Statut', max_length=20, choices=DeliveryNoteStatus.choices,
+                             default=DeliveryNoteStatus.DRAFT)
+    
+    # Signature
+    received_by = models.CharField('Réceptionné par', max_length=100, blank=True)
+    signature = models.TextField('Signature (base64)', blank=True)  # Pour signature digitale future
+    
+    # Notes
+    notes = models.TextField('Notes', blank=True)
+    driver_notes = models.TextField('Notes chauffeur', blank=True)
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='delivery_notes_created')
+    delivered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='delivery_notes_delivered')
+    
+    class Meta:
+        verbose_name = 'Bon de livraison'
+        verbose_name_plural = 'Bons de livraison'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"BL {self.number} - {self.customer.name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.number:
+            self.number = self.generate_number()
+        # Copier l'adresse du client si pas définie
+        if not self.delivery_address and self.customer:
+            self.delivery_address = self.customer.address
+            self.delivery_phone = self.customer.phone
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def generate_number(cls):
+        from django.utils import timezone
+        today = timezone.now()
+        prefix = f"BL-{today.strftime('%Y%m')}"
+        last = cls.objects.filter(number__startswith=prefix).order_by('-number').first()
+        if last:
+            last_num = int(last.number.split('-')[-1])
+            return f"{prefix}-{last_num + 1:04d}"
+        return f"{prefix}-0001"
+    
+    @property
+    def total_quantity(self):
+        return sum(item.quantity for item in self.items.all())
+    
+    @property
+    def total_weight(self):
+        """Poids total en kg"""
+        return sum(item.total_weight for item in self.items.all())
+    
+    @classmethod
+    def create_from_order(cls, order, user=None):
+        """Créer un BL depuis une commande"""
+        delivery = cls.objects.create(
+            order=order,
+            customer=order.customer,
+            delivery_address=order.delivery_address or order.customer.address,
+            created_by=user
+        )
+        
+        # Copier les lignes de commande
+        for order_item in order.items.all():
+            DeliveryNoteItem.objects.create(
+                delivery_note=delivery,
+                product=order_item.product,
+                order_item=order_item,
+                quantity=order_item.quantity
+            )
+        
+        return delivery
+    
+    def mark_delivered(self, user=None, received_by=''):
+        """Marquer comme livré"""
+        from django.utils import timezone
+        self.status = DeliveryNoteStatus.DELIVERED
+        self.delivery_date = timezone.now()
+        self.delivered_by = user
+        if received_by:
+            self.received_by = received_by
+        self.save()
+        
+        # Mettre à jour la commande
+        self.order.status = OrderStatus.DELIVERED
+        self.order.save()
+        
+        # Créer mouvements de sortie stock
+        for item in self.items.all():
+            StockMovement.objects.create(
+                product=item.product,
+                movement_type=StockMovementType.OUT,
+                quantity=item.quantity,
+                reference=f"BL {self.number}",
+                stock_after=item.product.stock_quantity - item.quantity,
+                order=self.order,
+                created_by=user
+            )
+            
+            # Mettre à jour stock
+            item.product.stock_quantity -= item.quantity
+            item.product.save()
+
+
+class DeliveryNoteItem(models.Model):
+    """Ligne de bon de livraison"""
+    delivery_note = models.ForeignKey(DeliveryNote, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT)
+    order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    quantity = models.DecimalField('Quantité', max_digits=12, decimal_places=2)
+    quantity_delivered = models.DecimalField('Quantité livrée', max_digits=12, decimal_places=2, default=0)
+    
+    # Lot si traçabilité
+    lot_number = models.CharField('N° lot', max_length=50, blank=True)
+    
+    # Notes
+    notes = models.CharField('Notes', max_length=255, blank=True)
+    
+    class Meta:
+        verbose_name = 'Ligne BL'
+        verbose_name_plural = 'Lignes BL'
+    
+    def __str__(self):
+        return f"{self.quantity} x {self.product.code}"
+    
+    @property
+    def total_weight(self):
+        """Poids en kg"""
+        return self.quantity * self.product.unit_weight if hasattr(self.product, 'unit_weight') else self.quantity

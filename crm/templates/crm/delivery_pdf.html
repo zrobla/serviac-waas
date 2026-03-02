@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bon de Livraison {{ delivery.number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #1a237e;
+        }
+        
+        .logo-section h1 {
+            color: #1a237e;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .logo-section p {
+            color: #666;
+            font-size: 11px;
+        }
+        
+        .document-info {
+            text-align: right;
+        }
+        
+        .document-info h2 {
+            background: #1a237e;
+            color: white;
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .document-info .number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a237e;
+        }
+        
+        .document-info .date {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* Info boxes */
+        .info-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .info-box {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background: #fafafa;
+        }
+        
+        .info-box h3 {
+            color: #1a237e;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #1a237e;
+        }
+        
+        .info-box p {
+            margin: 3px 0;
+        }
+        
+        .info-box strong {
+            font-size: 14px;
+        }
+        
+        /* Commande ref */
+        .order-ref {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1a237e;
+        }
+        
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        
+        table th {
+            background: #1a237e;
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: normal;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        table tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        table tfoot {
+            font-weight: bold;
+            background: #f5f5f5;
+        }
+        
+        table tfoot td {
+            padding: 12px 10px;
+            border-top: 2px solid #1a237e;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        /* Signature */
+        .signatures {
+            display: flex;
+            gap: 30px;
+            margin-top: 40px;
+            margin-bottom: 30px;
+        }
+        
+        .signature-box {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .signature-box h4 {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #333;
+            padding-top: 5px;
+            margin: 0 20px;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        
+        /* Notes */
+        .notes {
+            background: #fff3e0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .notes h4 {
+            color: #e65100;
+            margin-bottom: 5px;
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+        
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1a237e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .print-btn:hover {
+            background: #283593;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer</button>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-section">
+                <h1>SERVIAC GROUP</h1>
+                <p>Production & Distribution d'Alimentation Animale</p>
+                <p>Abidjan, Côte d'Ivoire</p>
+                <p>Tél: +225 XX XX XX XX XX</p>
+            </div>
+            <div class="document-info">
+                <h2>BON DE LIVRAISON</h2>
+                <div class="number">{{ delivery.number }}</div>
+                <div class="date">Date: {{ delivery.created_at|date:"d/m/Y" }}</div>
+            </div>
+        </div>
+        
+        <!-- Order ref -->
+        <div class="order-ref">
+            <strong>Commande:</strong> {{ delivery.order.number }} du {{ delivery.order.created_at|date:"d/m/Y" }}
+        </div>
+        
+        <!-- Info boxes -->
+        <div class="info-row">
+            <div class="info-box">
+                <h3>Client</h3>
+                <p><strong>{{ delivery.customer.name }}</strong></p>
+                {% if delivery.customer.company_name and delivery.customer.company_name != delivery.customer.name %}
+                <p>{{ delivery.customer.company_name }}</p>
+                {% endif %}
+                <p>{{ delivery.customer.phone }}</p>
+                {% if delivery.customer.email %}
+                <p>{{ delivery.customer.email }}</p>
+                {% endif %}
+            </div>
+            <div class="info-box">
+                <h3>Adresse de livraison</h3>
+                <p>{{ delivery.delivery_address|linebreaksbr|default:"Adresse client" }}</p>
+                {% if delivery.delivery_phone %}
+                <p>Tél: {{ delivery.delivery_phone }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Products table -->
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60%">Désignation</th>
+                    <th class="text-center">Référence</th>
+                    <th class="text-center">Quantité</th>
+                    <th class="text-center">Lot</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in delivery.items.all %}
+                <tr>
+                    <td><strong>{{ item.product.name }}</strong></td>
+                    <td class="text-center">{{ item.product.code }}</td>
+                    <td class="text-center">{{ item.quantity|floatformat:0 }}</td>
+                    <td class="text-center">{{ item.lot_number|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" class="text-right">Total articles:</td>
+                    <td class="text-center">{{ delivery.total_quantity|floatformat:0 }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        {% if delivery.notes %}
+        <div class="notes">
+            <h4>Observations</h4>
+            <p>{{ delivery.notes }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Signatures -->
+        <div class="signatures">
+            <div class="signature-box">
+                <h4>Expéditeur</h4>
+                <div class="signature-line">
+                    SERVIAC GROUP
+                </div>
+            </div>
+            <div class="signature-box">
+                <h4>Transporteur</h4>
+                <div class="signature-line">
+                    {% if delivery.transporter %}{{ delivery.transporter }}{% else %}Nom & Signature{% endif %}
+                </div>
+            </div>
+            <div class="signature-box">
+                <h4>Destinataire</h4>
+                <div class="signature-line">
+                    {% if delivery.received_by %}{{ delivery.received_by }}{% else %}Nom & Signature{% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>SERVIAC GROUP SUARL</strong></p>
+            <p>Abidjan, Côte d'Ivoire | RCCM: XX-XXXXX | RC: XXXXXXX</p>
+            <p>Ce document fait foi de la remise des marchandises listées ci-dessus.</p>
+        </div>
+    </div>
+</body>
+</html>

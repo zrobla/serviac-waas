@@ -1,0 +1,129 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Bons de Livraison{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-truck me-2"></i>Bons de Livraison</h2>
+    <a href="{% url 'crm:delivery_create' %}" class="btn btn-success">
+        <i class="bi bi-plus-lg me-1"></i>Nouveau BL
+    </a>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Statut</label>
+                <select name="status" class="form-select">
+                    <option value="">Tous</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Filtrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>N° BL</th>
+                    <th>Commande</th>
+                    <th>Client</th>
+                    <th>Date prévue</th>
+                    <th class="text-center">Articles</th>
+                    <th>Statut</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for delivery in deliveries %}
+                <tr>
+                    <td>
+                        <a href="{% url 'crm:delivery_detail' delivery.pk %}">
+                            <strong>{{ delivery.number }}</strong>
+                        </a>
+                    </td>
+                    <td>
+                        <a href="{% url 'crm:order_detail' delivery.order.pk %}">
+                            {{ delivery.order.number }}
+                        </a>
+                    </td>
+                    <td>
+                        <a href="{% url 'crm:customer_detail' delivery.customer.pk %}">
+                            {{ delivery.customer.name }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if delivery.planned_date %}
+                        {{ delivery.planned_date|date:"d/m/Y" }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ delivery.items.count }}</td>
+                    <td>
+                        {% if delivery.status == 'draft' %}
+                        <span class="badge bg-secondary">Brouillon</span>
+                        {% elif delivery.status == 'ready' %}
+                        <span class="badge bg-info">Prêt</span>
+                        {% elif delivery.status == 'in_delivery' %}
+                        <span class="badge bg-warning text-dark">En livraison</span>
+                        {% elif delivery.status == 'delivered' %}
+                        <span class="badge bg-success">Livré</span>
+                        {% elif delivery.status == 'cancelled' %}
+                        <span class="badge bg-dark">Annulé</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'crm:delivery_detail' delivery.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'crm:delivery_pdf' delivery.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                            <i class="bi bi-printer"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        Aucun bon de livraison
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Précédent</a>
+        </li>
+        {% endif %}
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -85,6 +85,15 @@ urlpatterns = [
     path('inventaires/<int:pk>/', views.InventoryDetailView.as_view(), name='inventory_detail'),
     path('inventaires/<int:pk>/valider/', views.InventoryValidateView.as_view(), name='inventory_validate'),
     
+    # Bons de livraison (Phase 5)
+    path('livraisons/', views.DeliveryNoteListView.as_view(), name='delivery_list'),
+    path('livraisons/nouveau/', views.DeliveryNoteCreateView.as_view(), name='delivery_create'),
+    path('livraisons/<int:pk>/', views.DeliveryNoteDetailView.as_view(), name='delivery_detail'),
+    path('livraisons/<int:pk>/pret/', views.DeliveryNoteReadyView.as_view(), name='delivery_ready'),
+    path('livraisons/<int:pk>/partir/', views.DeliveryNoteStartView.as_view(), name='delivery_start'),
+    path('livraisons/<int:pk>/livrer/', views.DeliveryNoteDeliverView.as_view(), name='delivery_deliver'),
+    path('livraisons/<int:pk>/pdf/', views.DeliveryNotePDFView.as_view(), name='delivery_pdf'),
+    
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
     path('notifications/marquer-lues/', views.mark_notifications_read, name='mark_notifications_read'),

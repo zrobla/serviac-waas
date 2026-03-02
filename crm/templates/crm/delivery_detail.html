@@ -1,0 +1,232 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}BL {{ delivery.number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-truck me-2"></i>{{ delivery.number }}</h2>
+        <p class="text-muted mb-0">
+            Commande {{ delivery.order.number }} - {{ delivery.customer.name }}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'crm:delivery_pdf' delivery.pk %}" class="btn btn-outline-secondary" target="_blank">
+            <i class="bi bi-printer me-1"></i>Imprimer
+        </a>
+        <a href="{% url 'crm:delivery_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Retour
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Statut et progression -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    {% if delivery.status == 'draft' %}
+                    <span class="badge bg-secondary fs-6 me-3">Brouillon</span>
+                    {% elif delivery.status == 'ready' %}
+                    <span class="badge bg-info fs-6 me-3">Prêt pour livraison</span>
+                    {% elif delivery.status == 'in_delivery' %}
+                    <span class="badge bg-warning text-dark fs-6 me-3">En cours de livraison</span>
+                    {% elif delivery.status == 'delivered' %}
+                    <span class="badge bg-success fs-6 me-3">Livré</span>
+                    {% elif delivery.status == 'cancelled' %}
+                    <span class="badge bg-dark fs-6 me-3">Annulé</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Barre de progression -->
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar bg-secondary {% if delivery.status in 'ready,in_delivery,delivered' %}{% else %}progress-bar-striped{% endif %}" style="width: 25%">
+                        Brouillon
+                    </div>
+                    <div class="progress-bar bg-info {% if delivery.status in 'in_delivery,delivered' %}{% elif delivery.status == 'ready' %}progress-bar-striped{% else %}bg-light text-muted{% endif %}" style="width: 25%">
+                        Prêt
+                    </div>
+                    <div class="progress-bar bg-warning {% if delivery.status == 'delivered' %}{% elif delivery.status == 'in_delivery' %}progress-bar-striped{% else %}bg-light text-muted{% endif %}" style="width: 25%">
+                        En livraison
+                    </div>
+                    <div class="progress-bar bg-success {% if delivery.status == 'delivered' %}{% else %}bg-light text-muted{% endif %}" style="width: 25%">
+                        Livré
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Articles -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Articles à livrer</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produit</th>
+                            <th class="text-center">Quantité</th>
+                            <th>Lot</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in delivery.items.all %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.product.name }}</strong>
+                                <br><small class="text-muted">{{ item.product.code }}</small>
+                            </td>
+                            <td class="text-center">{{ item.quantity|floatformat:0 }}</td>
+                            <td>{{ item.lot_number|default:"-" }}</td>
+                            <td class="text-muted">{{ item.notes|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">Aucun article</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th>Total</th>
+                            <th class="text-center">{{ delivery.total_quantity|floatformat:0 }}</th>
+                            <th colspan="2"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Actions</h5>
+            </div>
+            <div class="card-body">
+                {% if delivery.status == 'draft' %}
+                <form method="post" action="{% url 'crm:delivery_ready' delivery.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-info btn-lg">
+                        <i class="bi bi-check me-1"></i>Marquer prêt pour livraison
+                    </button>
+                </form>
+                
+                {% elif delivery.status == 'ready' %}
+                <form method="post" action="{% url 'crm:delivery_start' delivery.pk %}" class="mb-3">
+                    {% csrf_token %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <input type="text" name="transporter" class="form-control" placeholder="Nom du transporteur">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" name="vehicle_info" class="form-control" placeholder="Véhicule / Immatriculation">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="bi bi-truck me-1"></i>Démarrer la livraison
+                    </button>
+                </form>
+                
+                {% elif delivery.status == 'in_delivery' %}
+                <form method="post" action="{% url 'crm:delivery_deliver' delivery.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Réceptionné par</label>
+                        <input type="text" name="received_by" class="form-control" placeholder="Nom de la personne qui a reçu">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Confirmer la livraison ? Le stock sera mis à jour.')">
+                        <i class="bi bi-check-lg me-1"></i>Confirmer livraison effectuée
+                    </button>
+                </form>
+                
+                {% elif delivery.status == 'delivered' %}
+                <div class="alert alert-success mb-0">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Livré le {{ delivery.delivery_date|date:"d/m/Y à H:i" }}
+                    {% if delivery.received_by %}<br>Réceptionné par: {{ delivery.received_by }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Informations client -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i>Client</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <strong>{{ delivery.customer.name }}</strong>
+                    {% if delivery.customer.customer_type == 'B2B' %}
+                    <span class="badge bg-primary ms-2">Pro</span>
+                    {% endif %}
+                </li>
+                <li class="list-group-item">
+                    <small class="text-muted">Téléphone</small><br>
+                    {{ delivery.customer.phone|default:"-" }}
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Adresse livraison -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Livraison</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">{{ delivery.delivery_address|linebreaks|default:"Adresse non définie" }}</p>
+                {% if delivery.delivery_phone %}
+                <p class="mb-0"><i class="bi bi-telephone me-1"></i>{{ delivery.delivery_phone }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Transport -->
+        {% if delivery.transporter or delivery.vehicle_info %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-truck me-2"></i>Transport</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% if delivery.transporter %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Transporteur</span>
+                    <strong>{{ delivery.transporter }}</strong>
+                </li>
+                {% endif %}
+                {% if delivery.vehicle_info %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Véhicule</span>
+                    <strong>{{ delivery.vehicle_info }}</strong>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Liens -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Liens</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <a href="{% url 'crm:order_detail' delivery.order.pk %}">
+                        <i class="bi bi-cart me-1"></i>Commande {{ delivery.order.number }}
+                    </a>
+                </li>
+                <li class="list-group-item">
+                    <a href="{% url 'crm:customer_detail' delivery.customer.pk %}">
+                        <i class="bi bi-person me-1"></i>Fiche client
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
