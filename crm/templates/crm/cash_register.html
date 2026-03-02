@@ -1,0 +1,275 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Caisse{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-cash-stack me-2"></i>Caisse</h2>
+</div>
+
+{% if not current_register %}
+<!-- Pas de caisse ouverte -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-safe2 fs-1 text-muted d-block mb-3"></i>
+        <h4>Aucune caisse ouverte</h4>
+        <p class="text-muted mb-4">Ouvrez une session de caisse pour commencer à encaisser</p>
+        
+        <form method="post" action="{% url 'crm:cash_register_open' %}" class="d-inline-block">
+            {% csrf_token %}
+            <div class="input-group mb-3" style="max-width: 300px; margin: 0 auto;">
+                <span class="input-group-text">Fond de caisse</span>
+                <input type="number" name="opening_balance" class="form-control" value="0" min="0">
+                <span class="input-group-text">FCFA</span>
+            </div>
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-unlock me-2"></i>Ouvrir la caisse
+            </button>
+        </form>
+    </div>
+</div>
+{% else %}
+<!-- Caisse ouverte -->
+<div class="row">
+    <!-- Colonne gauche: Encaissement rapide -->
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvel encaissement</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'crm:cash_register_payment' %}">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Client *</label>
+                            <select name="customer" class="form-select" required id="payment-customer">
+                                <option value="">-- Sélectionner --</option>
+                                {% for customer in customers_with_balance %}
+                                <option value="{{ customer.id }}" data-balance="{{ customer.balance }}">
+                                    {{ customer.name }} ({{ customer.balance|floatformat:0 }} FCFA)
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Facture (optionnel)</label>
+                            <select name="invoice" class="form-select" id="payment-invoice">
+                                <option value="">-- Paiement sur compte --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Montant *</label>
+                            <div class="input-group">
+                                <input type="number" name="amount" class="form-control" required min="1" step="1">
+                                <span class="input-group-text">FCFA</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mode de paiement</label>
+                            <select name="method" class="form-select">
+                                {% for value, label in payment_methods %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Réf. transaction</label>
+                            <input type="text" name="transaction_ref" class="form-control" placeholder="N° mobile money, chèque...">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-cash me-2"></i>Encaisser
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Encaissements du jour -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Encaissements du jour</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Heure</th>
+                            <th>Client</th>
+                            <th>Mode</th>
+                            <th class="text-end">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in today_payments %}
+                        <tr>
+                            <td>{{ payment.created_at|time:"H:i" }}</td>
+                            <td>
+                                <a href="{% url 'crm:customer_detail' payment.customer.pk %}">
+                                    {{ payment.customer.name }}
+                                </a>
+                                {% if payment.invoice %}
+                                <small class="text-muted d-block">{{ payment.invoice.number }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if payment.payment_method == 'cash' %}
+                                <span class="badge bg-success">Espèces</span>
+                                {% elif payment.payment_method in 'orange_money,mtn_money,moov_money,wave' %}
+                                <span class="badge bg-warning text-dark">Mobile</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ payment.get_payment_method_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">{{ payment.amount|floatformat:0 }} FCFA</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                Aucun encaissement aujourd'hui
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Colonne droite: État de la caisse -->
+    <div class="col-lg-5">
+        <!-- Totaux -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>État de la caisse</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td>Fond de caisse:</td>
+                        <td class="text-end">{{ current_register.opening_balance|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="table-success">
+                        <td><i class="bi bi-cash me-1"></i>Espèces:</td>
+                        <td class="text-end fw-bold">{{ current_register.total_cash|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="table-warning">
+                        <td><i class="bi bi-phone me-1"></i>Mobile Money:</td>
+                        <td class="text-end fw-bold">{{ current_register.total_mobile_money|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="table-info">
+                        <td><i class="bi bi-bank me-1"></i>Virement/Chèque:</td>
+                        <td class="text-end fw-bold">{{ current_register.total_bank|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="border-top">
+                        <td><strong>Total encaissé:</strong></td>
+                        <td class="text-end"><strong>{{ current_register.total_receipts|floatformat:0 }} FCFA</strong></td>
+                    </tr>
+                    <tr class="table-dark">
+                        <td><strong>Solde théorique espèces:</strong></td>
+                        <td class="text-end fs-5"><strong>{{ current_register.expected_balance|floatformat:0 }} FCFA</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Mouvement de caisse -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Mouvement de caisse</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'crm:cash_movement' %}">
+                    {% csrf_token %}
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <select name="movement_type" class="form-select">
+                                <option value="in">+ Entrée</option>
+                                <option value="out">- Sortie</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <input type="number" name="amount" class="form-control" placeholder="Montant" required>
+                        </div>
+                        <div class="col-12">
+                            <input type="text" name="reason" class="form-control" placeholder="Motif" required>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-plus me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                {% if movements %}
+                <hr>
+                <small class="text-muted">Mouvements du jour:</small>
+                <ul class="list-unstyled mb-0">
+                    {% for mv in movements %}
+                    <li class="{% if mv.movement_type == 'in' %}text-success{% else %}text-danger{% endif %}">
+                        {% if mv.movement_type == 'in' %}+{% else %}-{% endif %}{{ mv.amount|floatformat:0 }} - {{ mv.reason }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Clôture -->
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-lock me-2"></i>Clôturer la caisse</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'crm:cash_register_close' %}" onsubmit="return confirm('Êtes-vous sûr de vouloir clôturer la caisse ?')">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Solde réel en caisse (espèces)</label>
+                        <div class="input-group">
+                            <input type="number" name="closing_balance" class="form-control" 
+                                   value="{{ current_register.expected_balance|floatformat:0 }}" required>
+                            <span class="input-group-text">FCFA</span>
+                        </div>
+                        <small class="text-muted">Comptez les espèces et entrez le montant réel</small>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-lock-fill me-1"></i>Clôturer la caisse
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Charger les factures du client sélectionné
+document.getElementById('payment-customer')?.addEventListener('change', function() {
+    const customerId = this.value;
+    const invoiceSelect = document.getElementById('payment-invoice');
+    
+    // Vider et réinitialiser
+    invoiceSelect.innerHTML = '<option value="">-- Paiement sur compte --</option>';
+    
+    if (customerId) {
+        // Appel API pour récupérer les factures (simplifié)
+        fetch(`/api/v1/invoices/?customer=${customerId}&status=sent,partial`)
+            .then(r => r.json())
+            .then(data => {
+                data.results?.forEach(inv => {
+                    const option = document.createElement('option');
+                    option.value = inv.id;
+                    option.textContent = `${inv.number} - ${inv.amount_due} FCFA`;
+                    invoiceSelect.appendChild(option);
+                });
+            })
+            .catch(() => {});
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Paiement {{ payment.reference }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-cash-coin me-2"></i>{{ payment.reference }}
+        <span class="badge bg-success ms-2">{{ payment.get_payment_type_display }}</span>
+    </h2>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Détails du paiement</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" width="40%">Référence:</td>
+                        <td><strong>{{ payment.reference }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Date:</td>
+                        <td>{{ payment.payment_date|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Client:</td>
+                        <td>
+                            <a href="{% url 'crm:customer_detail' payment.customer.pk %}">
+                                {{ payment.customer.name }}
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Mode de paiement:</td>
+                        <td>
+                            {% if payment.payment_method == 'cash' %}
+                            <span class="badge bg-success">Espèces</span>
+                            {% elif payment.payment_method == 'orange_money' %}
+                            <span class="badge bg-warning text-dark">Orange Money</span>
+                            {% elif payment.payment_method == 'mtn_money' %}
+                            <span class="badge bg-warning text-dark">MTN Money</span>
+                            {% elif payment.payment_method == 'wave' %}
+                            <span class="badge bg-info">Wave</span>
+                            {% elif payment.payment_method == 'bank_transfer' %}
+                            <span class="badge bg-primary">Virement</span>
+                            {% elif payment.payment_method == 'check' %}
+                            <span class="badge bg-secondary">Chèque</span>
+                            {% else %}
+                            {{ payment.get_payment_method_display }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if payment.transaction_ref %}
+                    <tr>
+                        <td class="text-muted">Réf. transaction:</td>
+                        <td><code>{{ payment.transaction_ref }}</code></td>
+                    </tr>
+                    {% endif %}
+                    {% if payment.invoice %}
+                    <tr>
+                        <td class="text-muted">Facture:</td>
+                        <td>
+                            <a href="{% url 'crm:invoice_detail' payment.invoice.pk %}">
+                                {{ payment.invoice.number }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if payment.order %}
+                    <tr>
+                        <td class="text-muted">Commande:</td>
+                        <td>
+                            <a href="{% url 'crm:order_detail' payment.order.pk %}">
+                                {{ payment.order.number }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Enregistré par:</td>
+                        <td>{{ payment.created_by|default:"Système" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Date enregistrement:</td>
+                        <td>{{ payment.created_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center py-5">
+                <h6>Montant encaissé</h6>
+                <h1 class="display-4 mb-0">{{ payment.amount|floatformat:0 }} FCFA</h1>
+            </div>
+        </div>
+        
+        {% if payment.notes %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Notes</h5>
+            </div>
+            <div class="card-body">
+                {{ payment.notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Impact sur le solde client -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i>Solde client après paiement</h5>
+            </div>
+            <div class="card-body">
+                <h3 class="{% if payment.customer.balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                    {{ payment.customer.balance|floatformat:0 }} FCFA
+                </h3>
+                <a href="{% url 'crm:customer_ledger' payment.customer.pk %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-journal-text me-1"></i>Voir le grand livre
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'crm:payment_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour aux paiements
+    </a>
+</div>
+{% endblock %}

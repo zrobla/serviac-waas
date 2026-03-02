@@ -521,3 +521,338 @@ class InvoiceItem(models.Model):
     
     def __str__(self):
         return f"{self.quantity} x {self.description}"
+
+
+# ============================================================
+# PHASE 3: GESTION FINANCIÈRE
+# ============================================================
+
+class PaymentMethod(models.TextChoices):
+    CASH = 'cash', 'Espèces'
+    ORANGE_MONEY = 'orange_money', 'Orange Money'
+    MTN_MONEY = 'mtn_money', 'MTN Money'
+    MOOV_MONEY = 'moov_money', 'Moov Money'
+    WAVE = 'wave', 'Wave'
+    BANK_TRANSFER = 'bank_transfer', 'Virement bancaire'
+    CHECK = 'check', 'Chèque'
+    CREDIT = 'credit', 'Crédit client'
+
+
+class PaymentType(models.TextChoices):
+    PAYMENT = 'payment', 'Encaissement'
+    REFUND = 'refund', 'Remboursement'
+    CREDIT_NOTE = 'credit_note', 'Avoir'
+    ADJUSTMENT = 'adjustment', 'Ajustement'
+
+
+class Payment(models.Model):
+    """Paiement/Encaissement SERVIAC"""
+    # Référence
+    reference = models.CharField('Référence', max_length=30, unique=True, editable=False)
+    
+    # Liens
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='payments', verbose_name='Client')
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='payments', verbose_name='Facture')
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name='payments', verbose_name='Commande')
+    
+    # Type et méthode
+    payment_type = models.CharField('Type', max_length=20, choices=PaymentType.choices, default=PaymentType.PAYMENT)
+    payment_method = models.CharField('Méthode', max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.CASH)
+    
+    # Montants
+    amount = models.DecimalField('Montant', max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    
+    # Infos complémentaires
+    payment_date = models.DateField('Date paiement')
+    transaction_ref = models.CharField('Réf. transaction', max_length=100, blank=True, 
+                                       help_text='Numéro de transaction mobile money, chèque, etc.')
+    notes = models.TextField('Notes', blank=True)
+    
+    # Caisse
+    cash_register = models.ForeignKey('CashRegister', on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='payments', verbose_name='Caisse')
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='payments_created')
+    
+    class Meta:
+        verbose_name = 'Paiement'
+        verbose_name_plural = 'Paiements'
+        ordering = ['-payment_date', '-created_at']
+    
+    def __str__(self):
+        return f"{self.reference} - {self.customer.name} - {self.amount} FCFA"
+    
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = self.generate_reference()
+        if not self.payment_date:
+            self.payment_date = timezone.now().date()
+        
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        # Mettre à jour le solde client et la facture
+        if is_new:
+            self.apply_to_balance()
+            if self.invoice:
+                self.apply_to_invoice()
+    
+    @classmethod
+    def generate_reference(cls):
+        today = timezone.now()
+        prefix = f"PAY-{today.strftime('%Y%m%d')}"
+        last = cls.objects.filter(reference__startswith=prefix).order_by('-reference').first()
+        if last:
+            last_num = int(last.reference.split('-')[-1])
+            return f"{prefix}-{last_num + 1:04d}"
+        return f"{prefix}-0001"
+    
+    def apply_to_balance(self):
+        """Applique le paiement au solde client"""
+        if self.payment_type == PaymentType.PAYMENT:
+            self.customer.balance -= self.amount
+        elif self.payment_type in [PaymentType.REFUND, PaymentType.CREDIT_NOTE]:
+            self.customer.balance += self.amount
+        self.customer.save()
+        
+        # Créer l'écriture dans le grand livre
+        CustomerLedger.objects.create(
+            customer=self.customer,
+            payment=self,
+            transaction_type='credit' if self.payment_type == PaymentType.PAYMENT else 'debit',
+            amount=self.amount,
+            balance_after=self.customer.balance,
+            description=f"Paiement {self.reference}"
+        )
+    
+    def apply_to_invoice(self):
+        """Applique le paiement à la facture"""
+        if self.payment_type == PaymentType.PAYMENT:
+            self.invoice.amount_paid += self.amount
+            if self.invoice.amount_paid >= self.invoice.total:
+                self.invoice.status = InvoiceStatus.PAID
+            elif self.invoice.amount_paid > 0:
+                self.invoice.status = InvoiceStatus.PARTIAL
+            self.invoice.save()
+
+
+class CustomerLedger(models.Model):
+    """Grand livre client - historique des mouvements"""
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='ledger_entries', verbose_name='Client')
+    
+    # Liens optionnels
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='ledger_entries')
+    payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, null=True, blank=True, related_name='ledger_entries')
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True, related_name='ledger_entries')
+    
+    # Transaction
+    transaction_type = models.CharField('Type', max_length=10, choices=[
+        ('debit', 'Débit (dette)'),
+        ('credit', 'Crédit (paiement)')
+    ])
+    amount = models.DecimalField('Montant', max_digits=14, decimal_places=2)
+    balance_after = models.DecimalField('Solde après', max_digits=14, decimal_places=2)
+    
+    description = models.CharField('Description', max_length=255)
+    created_at = models.DateTimeField('Date', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        verbose_name = 'Écriture client'
+        verbose_name_plural = 'Grand livre client'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.customer.name} - {self.transaction_type} - {self.amount}"
+
+
+class CustomerCredit(models.Model):
+    """Avoirs clients - crédits à utiliser"""
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='credits', verbose_name='Client')
+    
+    # Montants
+    original_amount = models.DecimalField('Montant initial', max_digits=14, decimal_places=2)
+    remaining_amount = models.DecimalField('Montant restant', max_digits=14, decimal_places=2)
+    
+    # Origine
+    reason = models.CharField('Motif', max_length=255)
+    source_invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='credit_notes', verbose_name='Facture origine')
+    
+    # Validité
+    expiry_date = models.DateField('Date expiration', null=True, blank=True)
+    is_active = models.BooleanField('Actif', default=True)
+    
+    # Traçabilité
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        verbose_name = 'Avoir client'
+        verbose_name_plural = 'Avoirs clients'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Avoir {self.customer.name} - {self.remaining_amount} FCFA"
+    
+    @property
+    def is_expired(self):
+        if self.expiry_date:
+            return timezone.now().date() > self.expiry_date
+        return False
+    
+    @property
+    def is_usable(self):
+        return self.is_active and self.remaining_amount > 0 and not self.is_expired
+
+
+class PaymentSchedule(models.Model):
+    """Échéancier de paiement"""
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='payment_schedules')
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payment_schedules')
+    
+    # Échéance
+    due_date = models.DateField('Date échéance')
+    amount = models.DecimalField('Montant', max_digits=14, decimal_places=2)
+    
+    # Statut
+    is_paid = models.BooleanField('Payé', default=False)
+    paid_date = models.DateField('Date paiement', null=True, blank=True)
+    payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Rappels
+    reminder_sent = models.BooleanField('Rappel envoyé', default=False)
+    reminder_date = models.DateField('Date rappel', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Échéance'
+        verbose_name_plural = 'Échéancier'
+        ordering = ['due_date']
+    
+    def __str__(self):
+        status = "✓" if self.is_paid else "○"
+        return f"{status} {self.due_date} - {self.amount} FCFA"
+    
+    @property
+    def is_overdue(self):
+        return not self.is_paid and self.due_date < timezone.now().date()
+    
+    @property
+    def days_until_due(self):
+        if self.is_paid:
+            return None
+        return (self.due_date - timezone.now().date()).days
+
+
+class CashRegisterStatus(models.TextChoices):
+    OPEN = 'open', 'Ouverte'
+    CLOSED = 'closed', 'Clôturée'
+
+
+class CashRegister(models.Model):
+    """Session de caisse"""
+    # Identification
+    name = models.CharField('Nom caisse', max_length=50, default='Caisse principale')
+    session_date = models.DateField('Date session')
+    
+    # Soldes
+    opening_balance = models.DecimalField('Solde ouverture', max_digits=14, decimal_places=2, default=0)
+    closing_balance = models.DecimalField('Solde clôture', max_digits=14, decimal_places=2, null=True, blank=True)
+    expected_balance = models.DecimalField('Solde théorique', max_digits=14, decimal_places=2, default=0)
+    
+    # Totaux par méthode
+    total_cash = models.DecimalField('Total espèces', max_digits=14, decimal_places=2, default=0)
+    total_mobile_money = models.DecimalField('Total Mobile Money', max_digits=14, decimal_places=2, default=0)
+    total_bank = models.DecimalField('Total virement/chèque', max_digits=14, decimal_places=2, default=0)
+    
+    # Statut
+    status = models.CharField('Statut', max_length=10, choices=CashRegisterStatus.choices, default=CashRegisterStatus.OPEN)
+    
+    # Gestion
+    opened_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='cash_registers_opened')
+    opened_at = models.DateTimeField('Ouvert le', auto_now_add=True)
+    closed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cash_registers_closed')
+    closed_at = models.DateTimeField('Clôturé le', null=True, blank=True)
+    
+    notes = models.TextField('Notes', blank=True)
+    
+    class Meta:
+        verbose_name = 'Session de caisse'
+        verbose_name_plural = 'Sessions de caisse'
+        ordering = ['-session_date', '-opened_at']
+    
+    def __str__(self):
+        return f"{self.name} - {self.session_date} ({self.get_status_display()})"
+    
+    def save(self, *args, **kwargs):
+        if not self.session_date:
+            self.session_date = timezone.now().date()
+        super().save(*args, **kwargs)
+    
+    @property
+    def difference(self):
+        """Écart entre solde réel et théorique"""
+        if self.closing_balance is not None:
+            return self.closing_balance - self.expected_balance
+        return None
+    
+    @property
+    def total_receipts(self):
+        """Total des encaissements de la session"""
+        return self.total_cash + self.total_mobile_money + self.total_bank
+    
+    def recalculate_totals(self):
+        """Recalcule les totaux depuis les paiements"""
+        from django.db.models import Sum
+        payments = self.payments.filter(payment_type=PaymentType.PAYMENT)
+        
+        self.total_cash = payments.filter(payment_method=PaymentMethod.CASH).aggregate(
+            total=Sum('amount'))['total'] or Decimal('0')
+        
+        mobile_methods = [PaymentMethod.ORANGE_MONEY, PaymentMethod.MTN_MONEY, 
+                         PaymentMethod.MOOV_MONEY, PaymentMethod.WAVE]
+        self.total_mobile_money = payments.filter(payment_method__in=mobile_methods).aggregate(
+            total=Sum('amount'))['total'] or Decimal('0')
+        
+        bank_methods = [PaymentMethod.BANK_TRANSFER, PaymentMethod.CHECK]
+        self.total_bank = payments.filter(payment_method__in=bank_methods).aggregate(
+            total=Sum('amount'))['total'] or Decimal('0')
+        
+        self.expected_balance = self.opening_balance + self.total_cash
+        self.save()
+    
+    def close(self, closing_balance, user):
+        """Clôture la caisse"""
+        self.closing_balance = closing_balance
+        self.status = CashRegisterStatus.CLOSED
+        self.closed_by = user
+        self.closed_at = timezone.now()
+        self.save()
+
+
+class CashMovement(models.Model):
+    """Mouvements de caisse hors ventes"""
+    cash_register = models.ForeignKey(CashRegister, on_delete=models.CASCADE, related_name='movements')
+    
+    movement_type = models.CharField('Type', max_length=10, choices=[
+        ('in', 'Entrée'),
+        ('out', 'Sortie')
+    ])
+    amount = models.DecimalField('Montant', max_digits=14, decimal_places=2)
+    reason = models.CharField('Motif', max_length=255)
+    
+    created_at = models.DateTimeField('Date', auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        verbose_name = 'Mouvement de caisse'
+        verbose_name_plural = 'Mouvements de caisse'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        sign = '+' if self.movement_type == 'in' else '-'
+        return f"{sign}{self.amount} FCFA - {self.reason}"

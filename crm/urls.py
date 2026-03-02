@@ -18,6 +18,7 @@ urlpatterns = [
     path('clients/nouveau/', views.CustomerCreateView.as_view(), name='customer_create'),
     path('clients/<int:pk>/', views.CustomerDetailView.as_view(), name='customer_detail'),
     path('clients/<int:pk>/modifier/', views.CustomerUpdateView.as_view(), name='customer_update'),
+    path('clients/<int:pk>/grand-livre/', views.CustomerLedgerView.as_view(), name='customer_ledger'),
     
     # Products
     path('produits/', views.ProductListView.as_view(), name='product_list'),
@@ -44,6 +45,23 @@ urlpatterns = [
     path('factures/', views.InvoiceListView.as_view(), name='invoice_list'),
     path('factures/<int:pk>/', views.InvoiceDetailView.as_view(), name='invoice_detail'),
     path('factures/<int:pk>/pdf/', views.InvoicePDFView.as_view(), name='invoice_pdf'),
+    path('factures/<int:pk>/paiement/', views.InvoicePaymentView.as_view(), name='invoice_payment'),
+    
+    # Payments (Phase 3)
+    path('paiements/', views.PaymentListView.as_view(), name='payment_list'),
+    path('paiements/nouveau/', views.PaymentCreateView.as_view(), name='payment_create'),
+    path('paiements/<int:pk>/', views.PaymentDetailView.as_view(), name='payment_detail'),
+    
+    # Cash Register (Phase 3)
+    path('caisse/', views.CashRegisterView.as_view(), name='cash_register'),
+    path('caisse/ouvrir/', views.CashRegisterOpenView.as_view(), name='cash_register_open'),
+    path('caisse/cloturer/', views.CashRegisterCloseView.as_view(), name='cash_register_close'),
+    path('caisse/encaisser/', views.CashRegisterPaymentView.as_view(), name='cash_register_payment'),
+    path('caisse/mouvement/', views.CashMovementView.as_view(), name='cash_movement'),
+    path('caisse/historique/', views.CashRegisterHistoryView.as_view(), name='cash_register_history'),
+    
+    # Balance âgée
+    path('balance-agee/', views.AgedBalanceView.as_view(), name='aged_balance'),
     
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),

@@ -1,0 +1,114 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Grand livre - {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-journal-text me-2"></i>Grand livre client</h2>
+        <h4 class="text-muted mb-0">{{ customer.name }}</h4>
+    </div>
+    <div>
+        <span class="fs-4">Solde actuel: 
+            <strong class="{% if customer.balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ customer.balance|floatformat:0 }} FCFA
+            </strong>
+        </span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-striped mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Document</th>
+                    <th class="text-end">Débit</th>
+                    <th class="text-end">Crédit</th>
+                    <th class="text-end">Solde</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>{{ entry.description }}</td>
+                    <td>
+                        {% if entry.invoice %}
+                        <a href="{% url 'crm:invoice_detail' entry.invoice.pk %}">
+                            {{ entry.invoice.number }}
+                        </a>
+                        {% elif entry.payment %}
+                        <a href="{% url 'crm:payment_detail' entry.payment.pk %}">
+                            {{ entry.payment.reference }}
+                        </a>
+                        {% elif entry.order %}
+                        <a href="{% url 'crm:order_detail' entry.order.pk %}">
+                            {{ entry.order.number }}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if entry.transaction_type == 'debit' %}
+                        <span class="text-danger">{{ entry.amount|floatformat:0 }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if entry.transaction_type == 'credit' %}
+                        <span class="text-success">{{ entry.amount|floatformat:0 }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-bold {% if entry.balance_after > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ entry.balance_after|floatformat:0 }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Aucun mouvement enregistré
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Précédent</a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{% url 'crm:customer_detail' customer.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour au client
+    </a>
+    <a href="{% url 'crm:payment_create' %}?customer={{ customer.pk }}" class="btn btn-success">
+        <i class="bi bi-plus me-1"></i>Nouveau paiement
+    </a>
+</div>
+{% endblock %}

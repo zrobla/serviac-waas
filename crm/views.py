@@ -443,9 +443,357 @@ class InvoicePDFView(LoginRequiredMixin, View):
         
         # Pour l'instant, retourner HTML (WeasyPrint pour PDF réel)
         response = HttpResponse(html, content_type='text/html')
-        # response['Content-Disposition'] = f'attachment; filename="facture_{invoice.number}.pdf"'
         return response
+
+
+class InvoicePaymentView(LoginRequiredMixin, View):
+    """Enregistre un paiement sur une facture"""
+    def post(self, request, pk):
+        invoice = get_object_or_404(Invoice, pk=pk)
+        amount = request.POST.get('amount')
+        method = request.POST.get('method', 'cash')
+        transaction_ref = request.POST.get('transaction_ref', '')
+        
+        try:
+            amount = Decimal(amount)
+            if amount <= 0:
+                raise ValueError("Montant invalide")
+                
+            # Trouver la caisse ouverte
+            cash_register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+            
+            Payment.objects.create(
+                customer=invoice.customer,
+                invoice=invoice,
+                amount=amount,
+                payment_method=method,
+                transaction_ref=transaction_ref,
+                cash_register=cash_register,
+                created_by=request.user
+            )
+            
+            if cash_register:
+                cash_register.recalculate_totals()
+            
+            messages.success(request, f'Paiement de {amount} FCFA enregistré')
+        except (ValueError, InvalidOperation) as e:
+            messages.error(request, f'Erreur: {str(e)}')
+        
+        return redirect('crm:invoice_detail', pk=pk)
+
+
+# ============================================================
+# PHASE 3: GESTION FINANCIÈRE
+# ============================================================
+
+from .models import (Payment, PaymentMethod, PaymentType, CustomerLedger, 
+                     CustomerCredit, PaymentSchedule, CashRegister, CashRegisterStatus, CashMovement)
+from decimal import Decimal, InvalidOperation
+
+
+class PaymentListView(LoginRequiredMixin, ListView):
+    model = Payment
+    template_name = 'crm/payment_list.html'
+    context_object_name = 'payments'
+    paginate_by = 30
+    
+    def get_queryset(self):
+        qs = Payment.objects.select_related('customer', 'invoice')
+        method = self.request.GET.get('method')
+        if method:
+            qs = qs.filter(payment_method=method)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['payment_methods'] = PaymentMethod.choices
+        return context
+
+
+class PaymentCreateView(LoginRequiredMixin, CreateView):
+    model = Payment
+    template_name = 'crm/payment_form.html'
+    fields = ['customer', 'invoice', 'amount', 'payment_method', 'transaction_ref', 'notes']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['customers'] = Customer.objects.filter(is_active=True, balance__gt=0)
+        context['invoices'] = Invoice.objects.filter(status__in=[InvoiceStatus.SENT, InvoiceStatus.PARTIAL])
+        context['payment_methods'] = PaymentMethod.choices
+        return context
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        # Associer à la caisse ouverte
+        cash_register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+        if cash_register:
+            form.instance.cash_register = cash_register
+        
+        response = super().form_valid(form)
+        
+        if cash_register:
+            cash_register.recalculate_totals()
+        
+        messages.success(self.request, f'Paiement {self.object.reference} enregistré')
+        return response
+    
+    def get_success_url(self):
+        return reverse('crm:payment_detail', kwargs={'pk': self.object.pk})
+
+
+class PaymentDetailView(LoginRequiredMixin, DetailView):
+    model = Payment
+    template_name = 'crm/payment_detail.html'
+    context_object_name = 'payment'
+
+
+class CustomerLedgerView(LoginRequiredMixin, ListView):
+    """Grand livre d'un client"""
+    model = CustomerLedger
+    template_name = 'crm/customer_ledger.html'
+    context_object_name = 'entries'
+    paginate_by = 50
+    
+    def get_queryset(self):
+        self.customer = get_object_or_404(Customer, pk=self.kwargs['pk'])
+        return CustomerLedger.objects.filter(customer=self.customer)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['customer'] = self.customer
+        return context
+
+
+class CashRegisterView(LoginRequiredMixin, TemplateView):
+    """Vue principale de la caisse"""
+    template_name = 'crm/cash_register.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Caisse ouverte ?
+        context['current_register'] = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+        
+        if context['current_register']:
+            # Récupérer les paiements du jour
+            context['today_payments'] = Payment.objects.filter(
+                cash_register=context['current_register']
+            ).select_related('customer', 'invoice')
+            
+            # Mouvements de caisse
+            context['movements'] = context['current_register'].movements.all()
+        
+        # Clients avec solde pour encaissement rapide
+        context['customers_with_balance'] = Customer.objects.filter(
+            is_active=True, balance__gt=0
+        ).order_by('-balance')[:10]
+        
+        context['payment_methods'] = PaymentMethod.choices
+        
+        return context
+
+
+class CashRegisterOpenView(LoginRequiredMixin, View):
+    """Ouvrir une nouvelle session de caisse"""
+    def post(self, request):
+        # Vérifier qu'aucune caisse n'est ouverte
+        if CashRegister.objects.filter(status=CashRegisterStatus.OPEN).exists():
+            messages.error(request, 'Une caisse est déjà ouverte')
+            return redirect('crm:cash_register')
+        
+        opening_balance = request.POST.get('opening_balance', 0)
+        try:
+            opening_balance = Decimal(opening_balance)
+        except:
+            opening_balance = Decimal('0')
+        
+        CashRegister.objects.create(
+            opening_balance=opening_balance,
+            expected_balance=opening_balance,
+            opened_by=request.user
+        )
+        
+        messages.success(request, 'Caisse ouverte avec succès')
+        return redirect('crm:cash_register')
+
+
+class CashRegisterCloseView(LoginRequiredMixin, View):
+    """Clôturer la session de caisse"""
+    def post(self, request):
+        register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+        if not register:
+            messages.error(request, 'Aucune caisse ouverte')
+            return redirect('crm:cash_register')
+        
+        closing_balance = request.POST.get('closing_balance', 0)
+        try:
+            closing_balance = Decimal(closing_balance)
+        except:
+            closing_balance = register.expected_balance
+        
+        register.close(closing_balance, request.user)
+        
+        diff = register.difference
+        if diff and diff != 0:
+            if diff > 0:
+                messages.warning(request, f'Caisse clôturée avec un excédent de {diff} FCFA')
+            else:
+                messages.warning(request, f'Caisse clôturée avec un déficit de {abs(diff)} FCFA')
+        else:
+            messages.success(request, 'Caisse clôturée avec succès')
+        
+        return redirect('crm:cash_register')
+
+
+class CashRegisterPaymentView(LoginRequiredMixin, View):
+    """Encaisser rapidement depuis la caisse"""
+    def post(self, request):
+        register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+        if not register:
+            messages.error(request, 'Ouvrez d\'abord la caisse')
+            return redirect('crm:cash_register')
+        
+        customer_id = request.POST.get('customer')
+        amount = request.POST.get('amount')
+        method = request.POST.get('method', 'cash')
+        invoice_id = request.POST.get('invoice')
+        transaction_ref = request.POST.get('transaction_ref', '')
+        
+        try:
+            customer = Customer.objects.get(pk=customer_id)
+            amount = Decimal(amount)
+            invoice = Invoice.objects.get(pk=invoice_id) if invoice_id else None
+            
+            Payment.objects.create(
+                customer=customer,
+                invoice=invoice,
+                amount=amount,
+                payment_method=method,
+                transaction_ref=transaction_ref,
+                cash_register=register,
+                created_by=request.user
+            )
+            
+            register.recalculate_totals()
+            messages.success(request, f'Encaissement de {amount} FCFA effectué')
+            
+        except (Customer.DoesNotExist, ValueError, InvalidOperation) as e:
+            messages.error(request, f'Erreur: {str(e)}')
+        
+        return redirect('crm:cash_register')
+
+
+class CashMovementView(LoginRequiredMixin, View):
+    """Enregistrer un mouvement de caisse (entrée/sortie hors vente)"""
+    def post(self, request):
+        register = CashRegister.objects.filter(status=CashRegisterStatus.OPEN).first()
+        if not register:
+            messages.error(request, 'Ouvrez d\'abord la caisse')
+            return redirect('crm:cash_register')
+        
+        movement_type = request.POST.get('movement_type')
+        amount = request.POST.get('amount')
+        reason = request.POST.get('reason', '')
+        
+        try:
+            amount = Decimal(amount)
+            CashMovement.objects.create(
+                cash_register=register,
+                movement_type=movement_type,
+                amount=amount,
+                reason=reason,
+                created_by=request.user
+            )
+            
+            # Mettre à jour le solde théorique
+            if movement_type == 'in':
+                register.expected_balance += amount
+            else:
+                register.expected_balance -= amount
+            register.save()
+            
+            messages.success(request, f'Mouvement enregistré: {amount} FCFA')
+        except (ValueError, InvalidOperation) as e:
+            messages.error(request, f'Erreur: {str(e)}')
+        
+        return redirect('crm:cash_register')
+
+
+class CashRegisterHistoryView(LoginRequiredMixin, ListView):
+    """Historique des sessions de caisse"""
+    model = CashRegister
+    template_name = 'crm/cash_register_history.html'
+    context_object_name = 'registers'
+    paginate_by = 20
+
+
+class AgedBalanceView(LoginRequiredMixin, TemplateView):
+    """Balance âgée des clients"""
+    template_name = 'crm/aged_balance.html'
+    
+    def get_context_data(self, **kwargs):
+        from datetime import timedelta
+        context = super().get_context_data(**kwargs)
+        
+        today = timezone.now().date()
+        
+        # Récupérer toutes les factures non payées
+        unpaid_invoices = Invoice.objects.filter(
+            status__in=[InvoiceStatus.SENT, InvoiceStatus.PARTIAL, InvoiceStatus.OVERDUE]
+        ).select_related('customer')
+        
+        # Calculer les tranches d'âge
+        aged_data = []
+        totals = {'current': 0, 'days_30': 0, 'days_60': 0, 'days_90': 0, 'over_90': 0, 'total': 0}
+        
+        customers_balance = {}
+        for inv in unpaid_invoices:
+            remaining = inv.total - inv.amount_paid
+            if remaining <= 0:
+                continue
+                
+            days_old = (today - inv.invoice_date).days
+            
+            if inv.customer_id not in customers_balance:
+                customers_balance[inv.customer_id] = {
+                    'customer': inv.customer,
+                    'current': Decimal('0'),
+                    'days_30': Decimal('0'),
+                    'days_60': Decimal('0'),
+                    'days_90': Decimal('0'),
+                    'over_90': Decimal('0'),
+                    'total': Decimal('0')
+                }
+            
+            cb = customers_balance[inv.customer_id]
+            cb['total'] += remaining
+            totals['total'] += remaining
+            
+            if days_old <= 30:
+                cb['current'] += remaining
+                totals['current'] += remaining
+            elif days_old <= 60:
+                cb['days_30'] += remaining
+                totals['days_30'] += remaining
+            elif days_old <= 90:
+                cb['days_60'] += remaining
+                totals['days_60'] += remaining
+            elif days_old <= 120:
+                cb['days_90'] += remaining
+                totals['days_90'] += remaining
+            else:
+                cb['over_90'] += remaining
+                totals['over_90'] += remaining
+        
+        # Trier par total décroissant
+        aged_data = sorted(customers_balance.values(), key=lambda x: x['total'], reverse=True)
+        
+        context['aged_data'] = aged_data
+        context['totals'] = totals
+        
+        return context
 
 
 # Import models for F expression
 from django.db import models
+from django.urls import reverse
