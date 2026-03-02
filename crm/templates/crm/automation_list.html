@@ -1,0 +1,117 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Automatisations{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-lightning me-2"></i>Automatisations Email</h2>
+    <a href="{% url 'crm:email_templates' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-envelope me-1"></i>Templates
+    </a>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle me-2"></i>
+    Les automatisations envoient des emails automatiquement lorsqu'un événement se produit.
+    Activez ou désactivez-les selon vos besoins.
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nom</th>
+                    <th>Événement déclencheur</th>
+                    <th>Template</th>
+                    <th>Dernier déclenchement</th>
+                    <th>Statut</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr>
+                    <td><strong>{{ rule.name }}</strong></td>
+                    <td>
+                        <code>{{ rule.trigger_event }}</code>
+                        <br><small class="text-muted">{{ rule.get_trigger_event_display }}</small>
+                    </td>
+                    <td>
+                        <a href="{% url 'crm:email_preview' rule.email_template.pk %}">
+                            {{ rule.email_template.name }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if rule.last_triggered %}
+                        {{ rule.last_triggered|date:"d/m/Y H:i" }}
+                        {% else %}
+                        <span class="text-muted">Jamais</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if rule.is_active %}
+                        <span class="badge bg-success">Actif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="{% url 'crm:automation_toggle' rule.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm {% if rule.is_active %}btn-outline-secondary{% else %}btn-outline-success{% endif %}">
+                                {% if rule.is_active %}
+                                <i class="bi bi-pause"></i> Désactiver
+                                {% else %}
+                                <i class="bi bi-play"></i> Activer
+                                {% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Aucune règle d'automatisation configurée.<br>
+                        Exécutez: <code>python manage.py init_email_templates</code>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Événements disponibles</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6>Commandes</h6>
+                <ul class="list-unstyled text-muted small">
+                    <li><code>order_created</code> - Nouvelle commande</li>
+                    <li><code>order_confirmed</code> - Commande confirmée</li>
+                    <li><code>order_delivered</code> - Commande livrée</li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h6>Paiements</h6>
+                <ul class="list-unstyled text-muted small">
+                    <li><code>payment_received</code> - Paiement reçu</li>
+                    <li><code>payment_due_3d</code> - Échéance dans 3j</li>
+                    <li><code>payment_due_7d</code> - Retard 7j</li>
+                    <li><code>payment_due_30d</code> - Retard 30j</li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h6>Stock</h6>
+                <ul class="list-unstyled text-muted small">
+                    <li><code>stock_arrived</code> - Nouvel arrivage</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

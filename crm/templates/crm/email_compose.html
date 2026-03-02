@@ -1,0 +1,121 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Composer Email{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-send me-2"></i>Composer un email</h2>
+    <a href="{% url 'crm:email_logs' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-clock-history me-1"></i>Historique
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Destinataire</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Client <span class="text-danger">*</span></label>
+                        <select name="customer" class="form-select" id="customer-select" required>
+                            <option value="">-- Sélectionner un client --</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.pk }}" data-email="{{ customer.email }}">
+                                {{ customer.name }} ({{ customer.email }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Contenu</h5>
+                    <select name="template" class="form-select form-select-sm w-auto" id="template-select">
+                        <option value="">-- Utiliser un template --</option>
+                        {% for template in templates %}
+                        <option value="{{ template.pk }}" 
+                                data-subject="{{ template.subject }}"
+                                data-body="{{ template.body_html|escape }}">
+                            {{ template.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Sujet <span class="text-danger">*</span></label>
+                        <input type="text" name="subject" class="form-control" id="subject" required
+                               placeholder="Sujet de l'email">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Message <span class="text-danger">*</span></label>
+                        <textarea name="body" class="form-control" id="body" rows="15" required
+                                  placeholder="Corps de l'email (HTML supporté)"></textarea>
+                        <small class="text-muted">
+                            Variables: {% verbatim %}{{client_name}}, {{amount}}, {{order_number}}, {{invoice_number}}{% endverbatim %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'crm:email_logs' %}" class="btn btn-outline-secondary">Annuler</a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-send me-1"></i>Envoyer
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-info-circle me-2"></i>Conseils</h5>
+                <ul class="mb-0 ps-3">
+                    <li>Utilisez un template pour gagner du temps</li>
+                    <li>Les variables seront remplacées automatiquement</li>
+                    <li>Prévisualisez les templates avant de les utiliser</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Templates rapides</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for template in templates|slice:":5" %}
+                <li class="list-group-item">
+                    <a href="{% url 'crm:email_preview' template.pk %}" target="_blank">
+                        {{ template.name }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="card-footer">
+                <a href="{% url 'crm:email_templates' %}" class="text-muted small">
+                    Voir tous les templates →
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('template-select').addEventListener('change', function() {
+    var option = this.options[this.selectedIndex];
+    if (option.value) {
+        document.getElementById('subject').value = option.dataset.subject;
+        document.getElementById('body').value = option.dataset.body.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+    }
+});
+</script>
+{% endblock %}

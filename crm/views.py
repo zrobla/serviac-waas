@@ -1245,6 +1245,153 @@ class DeliveryNotePDFView(LoginRequiredMixin, View):
         })
 
 
+# ============================================================
+# PHASE 6: EMAILING & AUTOMATISATIONS
+# ============================================================
+
+from .models import EmailTemplate, EmailLog, EmailStatus, AutomationRule, trigger_automation
+
+
+class EmailTemplateListView(LoginRequiredMixin, ListView):
+    """Liste des templates email"""
+    model = EmailTemplate
+    template_name = 'crm/email_template_list.html'
+    context_object_name = 'templates'
+
+
+class EmailTemplateDetailView(LoginRequiredMixin, DetailView):
+    """Détail d'un template avec prévisualisation"""
+    model = EmailTemplate
+    template_name = 'crm/email_template_detail.html'
+    context_object_name = 'template'
+
+
+class EmailLogListView(LoginRequiredMixin, ListView):
+    """Historique des emails envoyés"""
+    model = EmailLog
+    template_name = 'crm/email_log_list.html'
+    context_object_name = 'logs'
+    paginate_by = 50
+    
+    def get_queryset(self):
+        qs = EmailLog.objects.select_related('customer', 'template')
+        customer = self.request.GET.get('customer')
+        if customer:
+            qs = qs.filter(customer_id=customer)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = EmailStatus.choices
+        return context
+
+
+class EmailComposeView(LoginRequiredMixin, View):
+    """Composer et envoyer un email"""
+    def get(self, request):
+        customers = Customer.objects.filter(is_active=True, email__isnull=False).exclude(email='')
+        templates = EmailTemplate.objects.filter(is_active=True)
+        return render(request, 'crm/email_compose.html', {
+            'customers': customers,
+            'templates': templates
+        })
+    
+    def post(self, request):
+        template_id = request.POST.get('template')
+        customer_id = request.POST.get('customer')
+        subject = request.POST.get('subject')
+        body = request.POST.get('body')
+        
+        if not customer_id:
+            messages.error(request, 'Sélectionnez un destinataire')
+            return redirect('crm:email_compose')
+        
+        customer = get_object_or_404(Customer, pk=customer_id)
+        if not customer.email:
+            messages.error(request, 'Ce client n\'a pas d\'adresse email')
+            return redirect('crm:email_compose')
+        
+        # Créer et envoyer l'email
+        template = None
+        if template_id:
+            template = EmailTemplate.objects.filter(pk=template_id).first()
+        
+        log = EmailLog.objects.create(
+            template=template,
+            customer=customer,
+            recipient_email=customer.email,
+            recipient_name=customer.name,
+            subject=subject,
+            body_html=body,
+            sent_by=request.user
+        )
+        
+        if log.send():
+            messages.success(request, f'Email envoyé à {customer.email}')
+        else:
+            messages.error(request, f'Erreur d\'envoi: {log.error_message}')
+        
+        return redirect('crm:email_logs')
+
+
+class EmailPreviewView(LoginRequiredMixin, View):
+    """Prévisualiser un template avec données de test"""
+    def get(self, request, pk):
+        template = get_object_or_404(EmailTemplate, pk=pk)
+        
+        # Données de test
+        context = {
+            'client_name': 'Client Test',
+            'order_number': 'CMD-202501-0001',
+            'order_date': '02/01/2025',
+            'amount': '500 000',
+            'items_count': 5,
+            'invoice_number': 'FAC-202501-0001',
+            'due_date': '15/01/2025',
+            'payment_date': '10/01/2025',
+            'payment_ref': 'PAY-20250110-0001',
+            'delivery_date': '05/01/2025',
+            'delivery_number': 'BL-202501-0001',
+            'products_list': 'Farine de Poisson Premium (100 sacs)',
+            'promo_title': 'Offre Spéciale Janvier',
+            'promo_description': 'Profitez de prix exceptionnels !',
+            'promo_discount': '-10%',
+            'promo_end_date': '31/01/2025',
+            'orders_count': 25,
+            'loyalty_reward': '5% de remise sur votre prochaine commande',
+            'order_link': '#'
+        }
+        
+        subject, body_html, _ = template.render(context)
+        
+        return render(request, 'crm/email_preview.html', {
+            'template': template,
+            'rendered_subject': subject,
+            'rendered_body': body_html
+        })
+
+
+class AutomationRuleListView(LoginRequiredMixin, ListView):
+    """Liste des règles d'automatisation"""
+    model = AutomationRule
+    template_name = 'crm/automation_list.html'
+    context_object_name = 'rules'
+
+
+class AutomationRuleToggleView(LoginRequiredMixin, View):
+    """Activer/désactiver une règle"""
+    def post(self, request, pk):
+        rule = get_object_or_404(AutomationRule, pk=pk)
+        rule.is_active = not rule.is_active
+        rule.save()
+        status = 'activée' if rule.is_active else 'désactivée'
+        messages.success(request, f'Règle {rule.name} {status}')
+        return redirect('crm:automation_list')
+
+
 # Import models for F expression
 from django.db import models
 from django.urls import reverse

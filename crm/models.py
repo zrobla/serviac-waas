@@ -1531,3 +1531,249 @@ class DeliveryNoteItem(models.Model):
     def total_weight(self):
         """Poids en kg"""
         return self.quantity * self.product.unit_weight if hasattr(self.product, 'unit_weight') else self.quantity
+
+
+# ============================================================
+# PHASE 6: EMAILING & AUTOMATISATIONS
+# ============================================================
+
+class EmailCategory(models.TextChoices):
+    ORDER = 'order', 'Commandes'
+    PAYMENT = 'payment', 'Paiements'
+    STOCK = 'stock', 'Stock'
+    MARKETING = 'marketing', 'Marketing'
+    LOYALTY = 'loyalty', 'Fidélité'
+
+
+class EmailTemplate(models.Model):
+    """Template d'email pré-conçu"""
+    # Identification
+    code = models.CharField('Code', max_length=50, unique=True)
+    name = models.CharField('Nom', max_length=100)
+    
+    # Catégorie
+    category = models.CharField('Catégorie', max_length=20, choices=EmailCategory.choices)
+    
+    # Contenu
+    subject = models.CharField('Sujet', max_length=200, help_text="Utiliser {{client_name}}, {{amount}}, etc.")
+    body_html = models.TextField('Corps HTML')
+    body_text = models.TextField('Corps texte (fallback)', blank=True)
+    
+    # Configuration
+    is_active = models.BooleanField('Actif', default=True)
+    auto_trigger = models.CharField('Déclencheur auto', max_length=100, blank=True,
+                                   help_text="Event qui déclenche l'envoi (ex: order_created)")
+    
+    # Méta
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    updated_at = models.DateTimeField('Modifié le', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Template email'
+        verbose_name_plural = 'Templates email'
+        ordering = ['category', 'name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+    
+    def render(self, context):
+        """Rendre le template avec le contexte"""
+        from django.template import Template, Context
+        
+        subject = Template(self.subject).render(Context(context))
+        body_html = Template(self.body_html).render(Context(context))
+        body_text = Template(self.body_text).render(Context(context)) if self.body_text else ''
+        
+        return subject, body_html, body_text
+
+
+class EmailStatus(models.TextChoices):
+    PENDING = 'pending', 'En attente'
+    SENT = 'sent', 'Envoyé'
+    FAILED = 'failed', 'Échoué'
+    BOUNCED = 'bounced', 'Rejeté'
+
+
+class EmailLog(models.Model):
+    """Historique des emails envoyés"""
+    # Template utilisé
+    template = models.ForeignKey(EmailTemplate, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='logs')
+    
+    # Destinataire
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True,
+                                related_name='email_logs')
+    recipient_email = models.EmailField('Email destinataire')
+    recipient_name = models.CharField('Nom destinataire', max_length=100, blank=True)
+    
+    # Contenu envoyé
+    subject = models.CharField('Sujet', max_length=200)
+    body_html = models.TextField('Corps HTML')
+    body_text = models.TextField('Corps texte', blank=True)
+    
+    # Statut
+    status = models.CharField('Statut', max_length=20, choices=EmailStatus.choices,
+                             default=EmailStatus.PENDING)
+    
+    # Référence objet lié
+    related_type = models.CharField('Type objet', max_length=50, blank=True)  # Order, Invoice, etc.
+    related_id = models.PositiveIntegerField('ID objet', null=True, blank=True)
+    
+    # Méta
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    sent_at = models.DateTimeField('Envoyé le', null=True, blank=True)
+    error_message = models.TextField('Message erreur', blank=True)
+    
+    # Traçabilité
+    sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Log email'
+        verbose_name_plural = 'Logs email'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.subject} → {self.recipient_email} ({self.get_status_display()})"
+    
+    def send(self, fail_silently=True):
+        """Envoyer l'email"""
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        try:
+            send_mail(
+                subject=self.subject,
+                message=self.body_text or self.body_html,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[self.recipient_email],
+                html_message=self.body_html,
+                fail_silently=fail_silently
+            )
+            self.status = EmailStatus.SENT
+            self.sent_at = timezone.now()
+        except Exception as e:
+            self.status = EmailStatus.FAILED
+            self.error_message = str(e)
+        
+        self.save()
+        return self.status == EmailStatus.SENT
+
+
+class AutomationTrigger(models.TextChoices):
+    ORDER_CREATED = 'order_created', 'Nouvelle commande'
+    ORDER_CONFIRMED = 'order_confirmed', 'Commande confirmée'
+    ORDER_DELIVERED = 'order_delivered', 'Commande livrée'
+    INVOICE_CREATED = 'invoice_created', 'Facture créée'
+    PAYMENT_RECEIVED = 'payment_received', 'Paiement reçu'
+    PAYMENT_DUE_3D = 'payment_due_3d', 'Échéance dans 3 jours'
+    PAYMENT_DUE_7D = 'payment_due_7d', 'Retard 7 jours'
+    PAYMENT_DUE_30D = 'payment_due_30d', 'Retard 30 jours'
+    STOCK_ARRIVED = 'stock_arrived', 'Stock arrivé'
+    MANUAL = 'manual', 'Envoi manuel'
+
+
+class AutomationRule(models.Model):
+    """Règle d'automatisation d'envoi d'email"""
+    # Identification
+    name = models.CharField('Nom', max_length=100)
+    
+    # Déclencheur
+    trigger_event = models.CharField('Événement déclencheur', max_length=50,
+                                    choices=AutomationTrigger.choices)
+    
+    # Template à utiliser
+    email_template = models.ForeignKey(EmailTemplate, on_delete=models.CASCADE,
+                                       related_name='automation_rules')
+    
+    # Conditions additionnelles (JSON)
+    conditions = models.JSONField('Conditions', default=dict, blank=True,
+                                  help_text='Ex: {"min_amount": 100000, "customer_type": "B2B"}')
+    
+    # Configuration
+    is_active = models.BooleanField('Actif', default=True)
+    priority = models.PositiveIntegerField('Priorité', default=0)
+    
+    # Méta
+    created_at = models.DateTimeField('Créé le', auto_now_add=True)
+    last_triggered = models.DateTimeField('Dernier déclenchement', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Règle automatisation'
+        verbose_name_plural = 'Règles automatisation'
+        ordering = ['-priority', 'name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_trigger_event_display()})"
+    
+    def check_conditions(self, context):
+        """Vérifier si les conditions sont remplies"""
+        if not self.conditions:
+            return True
+        
+        for key, value in self.conditions.items():
+            if key == 'min_amount':
+                if context.get('amount', 0) < value:
+                    return False
+            elif key == 'customer_type':
+                if context.get('customer_type') != value:
+                    return False
+            # Ajouter d'autres conditions selon besoins
+        
+        return True
+    
+    def execute(self, context, user=None):
+        """Exécuter la règle et envoyer l'email"""
+        if not self.is_active or not self.email_template.is_active:
+            return None
+        
+        if not self.check_conditions(context):
+            return None
+        
+        # Récupérer le destinataire
+        customer = context.get('customer')
+        email = context.get('email') or (customer.email if customer else None)
+        
+        if not email:
+            return None
+        
+        # Rendre le template
+        subject, body_html, body_text = self.email_template.render(context)
+        
+        # Créer le log
+        log = EmailLog.objects.create(
+            template=self.email_template,
+            customer=customer,
+            recipient_email=email,
+            recipient_name=customer.name if customer else '',
+            subject=subject,
+            body_html=body_html,
+            body_text=body_text,
+            related_type=context.get('related_type', ''),
+            related_id=context.get('related_id'),
+            sent_by=user
+        )
+        
+        # Envoyer
+        log.send()
+        
+        # Mettre à jour la règle
+        self.last_triggered = timezone.now()
+        self.save()
+        
+        return log
+
+
+def trigger_automation(event, context, user=None):
+    """Déclencher les automatisations pour un événement"""
+    rules = AutomationRule.objects.filter(
+        trigger_event=event,
+        is_active=True
+    ).order_by('-priority')
+    
+    logs = []
+    for rule in rules:
+        log = rule.execute(context, user)
+        if log:
+            logs.append(log)
+    
+    return logs

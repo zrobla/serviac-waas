@@ -94,6 +94,15 @@ urlpatterns = [
     path('livraisons/<int:pk>/livrer/', views.DeliveryNoteDeliverView.as_view(), name='delivery_deliver'),
     path('livraisons/<int:pk>/pdf/', views.DeliveryNotePDFView.as_view(), name='delivery_pdf'),
     
+    # Emailing (Phase 6)
+    path('emails/templates/', views.EmailTemplateListView.as_view(), name='email_templates'),
+    path('emails/templates/<int:pk>/', views.EmailTemplateDetailView.as_view(), name='email_template_detail'),
+    path('emails/templates/<int:pk>/preview/', views.EmailPreviewView.as_view(), name='email_preview'),
+    path('emails/historique/', views.EmailLogListView.as_view(), name='email_logs'),
+    path('emails/composer/', views.EmailComposeView.as_view(), name='email_compose'),
+    path('emails/automatisations/', views.AutomationRuleListView.as_view(), name='automation_list'),
+    path('emails/automatisations/<int:pk>/toggle/', views.AutomationRuleToggleView.as_view(), name='automation_toggle'),
+    
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
     path('notifications/marquer-lues/', views.mark_notifications_read, name='mark_notifications_read'),

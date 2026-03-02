@@ -1,0 +1,87 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Prévisualisation Email{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-eye me-2"></i>Prévisualisation</h2>
+        <p class="text-muted mb-0">{{ template.name }}</p>
+    </div>
+    <a href="{% url 'crm:email_templates' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <strong>Sujet:</strong> {{ rendered_subject }}
+            </div>
+            <div class="card-body p-0">
+                <iframe id="preview-frame" style="width: 100%; height: 600px; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Informations</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Code</span>
+                    <code>{{ template.code }}</code>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Catégorie</span>
+                    <strong>{{ template.get_category_display }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Statut</span>
+                    {% if template.is_active %}
+                    <span class="badge bg-success">Actif</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactif</span>
+                    {% endif %}
+                </li>
+                {% if template.auto_trigger %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Déclencheur</span>
+                    <code>{{ template.auto_trigger }}</code>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Variables disponibles</h5>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <code>{% verbatim %}{{client_name}}{% endverbatim %}</code> - Nom du client<br>
+                    <code>{% verbatim %}{{order_number}}{% endverbatim %}</code> - N° commande<br>
+                    <code>{% verbatim %}{{invoice_number}}{% endverbatim %}</code> - N° facture<br>
+                    <code>{% verbatim %}{{amount}}{% endverbatim %}</code> - Montant<br>
+                    <code>{% verbatim %}{{due_date}}{% endverbatim %}</code> - Date échéance<br>
+                    <code>{% verbatim %}{{payment_date}}{% endverbatim %}</code> - Date paiement<br>
+                    <code>{% verbatim %}{{delivery_date}}{% endverbatim %}</code> - Date livraison<br>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var frame = document.getElementById('preview-frame');
+    var content = `{{ rendered_body|escapejs }}`;
+    frame.contentDocument.open();
+    frame.contentDocument.write(content);
+    frame.contentDocument.close();
+});
+</script>
+{% endblock %}

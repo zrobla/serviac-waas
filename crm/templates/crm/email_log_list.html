@@ -1,0 +1,112 @@
+{% extends 'base_crm.html' %}
+
+{% block page_title %}Historique Emails{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history me-2"></i>Historique Emails</h2>
+    <a href="{% url 'crm:email_compose' %}" class="btn btn-success">
+        <i class="bi bi-send me-1"></i>Composer un email
+    </a>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Statut</label>
+                <select name="status" class="form-select">
+                    <option value="">Tous</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Filtrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Destinataire</th>
+                    <th>Sujet</th>
+                    <th>Template</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        {% if log.customer %}
+                        <a href="{% url 'crm:customer_detail' log.customer.pk %}">
+                            {{ log.customer.name }}
+                        </a>
+                        {% else %}
+                        {{ log.recipient_name|default:log.recipient_email }}
+                        {% endif %}
+                        <br><small class="text-muted">{{ log.recipient_email }}</small>
+                    </td>
+                    <td>{{ log.subject|truncatechars:50 }}</td>
+                    <td>
+                        {% if log.template %}
+                        <span class="badge bg-light text-dark">{{ log.template.code }}</span>
+                        {% else %}
+                        <span class="text-muted">Manuel</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">En attente</span>
+                        {% elif log.status == 'sent' %}
+                        <span class="badge bg-success">Envoyé</span>
+                        {% elif log.status == 'failed' %}
+                        <span class="badge bg-danger" title="{{ log.error_message }}">Échoué</span>
+                        {% elif log.status == 'bounced' %}
+                        <span class="badge bg-dark">Rejeté</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        Aucun email envoyé
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Précédent</a>
+        </li>
+        {% endif %}
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Suivant</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

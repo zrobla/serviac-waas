@@ -170,6 +170,30 @@
                     <i class="bi bi-clipboard-check me-2"></i>Inventaires
                 </a>
             </li>
+            
+            <li class="nav-item mt-3">
+                <span class="nav-link text-white-50 small text-uppercase">Communication</span>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'emails/templates' in request.path %}active{% endif %}" href="{% url 'crm:email_templates' %}">
+                    <i class="bi bi-envelope me-2"></i>Templates Email
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'emails/composer' in request.path %}active{% endif %}" href="{% url 'crm:email_compose' %}">
+                    <i class="bi bi-send me-2"></i>Composer Email
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'emails/automatisations' in request.path %}active{% endif %}" href="{% url 'crm:automation_list' %}">
+                    <i class="bi bi-lightning me-2"></i>Automatisations
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'emails/historique' in request.path %}active{% endif %}" href="{% url 'crm:email_logs' %}">
+                    <i class="bi bi-clock-history me-2"></i>Historique
+                </a>
+            </li>
         </ul>
         
         <div class="mt-auto px-3 py-3 border-top border-secondary">
