@@ -1,7 +1,34 @@
 {% extends 'base_website.html' %}
 {% load static %}
 
-{% block title %}Notre Histoire - SERVIAC GROUP{% endblock %}
+{% block title %}À Propos de SERVIAC GROUP | 15+ Ans d'Excellence en Nutrition Animale{% endblock %}
+
+{% block meta_description %}SERVIAC GROUP: 15+ années d'expérience en nutrition animale. Production au Sénégal, distribution en Côte d'Ivoire. 500+ clients satisfaits, 1000+ tonnes/an.{% endblock %}
+
+{% block meta_keywords %}SERVIAC GROUP histoire, entreprise nutrition animale Côte d'Ivoire, fournisseur farine poisson Abidjan, grossiste alimentation bétail{% endblock %}
+
+{% block canonical %}https://serviac-group.com/a-propos/{% endblock %}
+
+{% block og_title %}À Propos de SERVIAC GROUP - 15+ Ans d'Excellence{% endblock %}
+{% block og_description %}Découvrez l'histoire de SERVIAC GROUP, leader en nutrition animale. Du Sénégal à la Côte d'Ivoire, nous transportons l'excellence.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "À Propos de SERVIAC GROUP",
+    "description": "Histoire et valeurs de SERVIAC GROUP, leader en nutrition animale",
+    "mainEntity": {
+        "@type": "Organization",
+        "name": "SERVIAC GROUP SUARL",
+        "foundingDate": "2011",
+        "numberOfEmployees": "20-50",
+        "areaServed": "Côte d'Ivoire"
+    }
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <!-- Hero À Propos -->

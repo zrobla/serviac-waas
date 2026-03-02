@@ -1,0 +1,26 @@
+# robots.txt for SERVIAC GROUP
+# https://serviac-group.com
+
+User-agent: *
+Allow: /
+Disallow: /crm/
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://serviac-group.com/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Google Bot
+User-agent: Googlebot
+Allow: /
+Disallow: /crm/
+Disallow: /admin/
+
+# Bing Bot
+User-agent: Bingbot
+Allow: /
+Disallow: /crm/
+Disallow: /admin/

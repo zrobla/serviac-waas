@@ -1,7 +1,39 @@
 {% extends 'base_website.html' %}
 {% load static %}
 
-{% block title %}Contact - SERVIAC GROUP{% endblock %}
+{% block title %}Contactez SERVIAC GROUP | Téléphone, WhatsApp, Email - Abidjan{% endblock %}
+
+{% block meta_description %}Contactez SERVIAC GROUP: ☎ +225 07 79 05 71 01, WhatsApp +225 07 01 80 80 49. Dépôt N'Dotré Abidjan. Lun-Sam 8h-18h. Devis gratuit farine de poisson.{% endblock %}
+
+{% block meta_keywords %}contact SERVIAC GROUP, téléphone farine poisson Abidjan, WhatsApp nutrition animale, adresse dépôt SERVIAC, devis farine poisson{% endblock %}
+
+{% block canonical %}https://serviac-group.com/contact/{% endblock %}
+
+{% block og_title %}Contactez SERVIAC GROUP - Abidjan, Côte d'Ivoire{% endblock %}
+{% block og_description %}Téléphone, WhatsApp, Email. Dépôt N'Dotré, Abidjan. Réponse rapide. Devis gratuit pour farine de poisson.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "name": "Contact SERVIAC GROUP",
+    "description": "Coordonnées et formulaire de contact SERVIAC GROUP",
+    "mainEntity": {
+        "@type": "LocalBusiness",
+        "name": "SERVIAC GROUP",
+        "telephone": "+225-07-79-05-71-01",
+        "email": "info@serviac-group.com",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "N'Dotré, près de Hotel Dandy",
+            "addressLocality": "Abidjan",
+            "addressCountry": "CI"
+        }
+    }
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <!-- Hero Contact -->

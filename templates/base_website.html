@@ -1,15 +1,191 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" prefix="og: https://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SERVIAC GROUP - Leader en farine de poisson de qualité premium pour la nutrition animale en Côte d'Ivoire. Protéines animales aux normes internationales.">
-    <meta name="keywords" content="farine de poisson, fish meal, nutrition animale, alimentation bétail, protéines animales, élevage, Côte d'Ivoire, Sénégal">
+    
+    <!-- Primary SEO Meta Tags -->
     <title>{% block title %}SERVIAC GROUP - Farine de Poisson Premium{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}SERVIAC GROUP - Leader en farine de poisson de qualité premium pour la nutrition animale en Côte d'Ivoire. 53% protéines, normes IFFO. Livraison nationale.{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}farine de poisson, fish meal, nutrition animale, alimentation bétail, protéines animales, élevage volaille, aquaculture, provendier, Côte d'Ivoire, Abidjan, Sénégal, SERVIAC GROUP{% endblock %}">
+    <meta name="author" content="SERVIAC GROUP SUARL">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="{% block canonical %}https://serviac-group.com/{% endblock %}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:site_name" content="SERVIAC GROUP">
+    <meta property="og:title" content="{% block og_title %}SERVIAC GROUP - Farine de Poisson Premium | Nutrition Animale{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Leader en farine de poisson de qualité premium pour la nutrition animale. 53% protéines, origine Océan Atlantique, livraison Côte d'Ivoire.{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{% static 'website/images/product-bag.jpg' %}{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}https://serviac-group.com/{% endblock %}">
+    <meta property="og:locale" content="fr_CI">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}SERVIAC GROUP - Farine de Poisson Premium{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Farine de poisson 53% protéines. Qualité premium pour nutrition animale. Livraison Côte d'Ivoire.{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{% static 'website/images/product-bag.jpg' %}{% endblock %}">
+    
+    <!-- Geo Tags -->
+    <meta name="geo.region" content="CI">
+    <meta name="geo.placename" content="Abidjan">
+    <meta name="geo.position" content="5.359952;-3.989740">
+    <meta name="ICBM" content="5.359952, -3.989740">
+    
+    <!-- Additional SEO -->
+    <meta name="theme-color" content="#1E3A5F">
+    <meta name="msapplication-TileColor" content="#1E3A5F">
+    <meta name="format-detection" content="telephone=yes">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'website/images/logo.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'website/images/logo.png' %}">
+    
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "SERVIAC GROUP SUARL",
+        "alternateName": "SERVIAC GROUP",
+        "url": "https://serviac-group.com",
+        "logo": "{% static 'website/images/logo.png' %}",
+        "description": "Leader en farine de poisson de qualité premium pour la nutrition animale en Côte d'Ivoire",
+        "foundingDate": "2011",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "N'Dotré, près de Hotel Dandy",
+            "addressLocality": "Abidjan",
+            "addressCountry": "CI"
+        },
+        "contactPoint": [
+            {
+                "@type": "ContactPoint",
+                "telephone": "+225-07-79-05-71-01",
+                "contactType": "sales",
+                "areaServed": "CI",
+                "availableLanguage": "French"
+            },
+            {
+                "@type": "ContactPoint",
+                "telephone": "+225-07-01-80-80-49",
+                "contactType": "customer service",
+                "areaServed": "CI",
+                "availableLanguage": "French"
+            }
+        ],
+        "sameAs": [
+            "https://wa.me/2250701808049"
+        ],
+        "areaServed": {
+            "@type": "Country",
+            "name": "Côte d'Ivoire"
+        },
+        "knowsAbout": ["Farine de poisson", "Nutrition animale", "Alimentation bétail", "Aquaculture"]
+    }
+    </script>
+    
+    <!-- Structured Data - Product -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Farine de Poisson Premium SERVIAC",
+        "description": "Farine de poisson de haute qualité, 53% protéines brutes, origine Océan Atlantique. Conditionnement sacs de 50kg.",
+        "brand": {
+            "@type": "Brand",
+            "name": "SERVIAC GROUP"
+        },
+        "manufacturer": {
+            "@type": "Organization",
+            "name": "SERVIAC GROUP SUARL"
+        },
+        "category": "Alimentation animale",
+        "material": "Poisson de l'Océan Atlantique",
+        "weight": {
+            "@type": "QuantitativeValue",
+            "value": "50",
+            "unitCode": "KGM"
+        },
+        "offers": {
+            "@type": "Offer",
+            "availability": "https://schema.org/InStock",
+            "priceCurrency": "XOF",
+            "priceValidUntil": "2026-12-31",
+            "seller": {
+                "@type": "Organization",
+                "name": "SERVIAC GROUP"
+            },
+            "areaServed": {
+                "@type": "Country",
+                "name": "Côte d'Ivoire"
+            }
+        },
+        "additionalProperty": [
+            {
+                "@type": "PropertyValue",
+                "name": "Protéines brutes",
+                "value": "53%"
+            },
+            {
+                "@type": "PropertyValue",
+                "name": "Matières minérales",
+                "value": "26.5%"
+            },
+            {
+                "@type": "PropertyValue",
+                "name": "Humidité",
+                "value": "7%"
+            }
+        ]
+    }
+    </script>
+    
+    <!-- Structured Data - LocalBusiness -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "SERVIAC GROUP",
+        "image": "{% static 'website/images/logo.png' %}",
+        "priceRange": "$$",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "N'Dotré, près de Hotel Dandy",
+            "addressLocality": "Abidjan",
+            "addressCountry": "CI"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 5.359952,
+            "longitude": -3.989740
+        },
+        "telephone": "+225-07-79-05-71-01",
+        "openingHoursSpecification": [
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                "opens": "08:00",
+                "closes": "18:00"
+            },
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": "Saturday",
+                "opens": "08:00",
+                "closes": "14:00"
+            }
+        ]
+    }
+    </script>
+    
+    {% block structured_data %}{% endblock %}
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     
     <!-- Bootstrap & Icons -->

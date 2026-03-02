@@ -1,7 +1,33 @@
 {% extends 'base_website.html' %}
 {% load static %}
 
-{% block title %}SERVIAC GROUP - Farine de Poisson Premium | Nutrition Animale{% endblock %}
+{% block title %}SERVIAC GROUP - Farine de Poisson Premium | Nutrition Animale Côte d'Ivoire{% endblock %}
+
+{% block meta_description %}SERVIAC GROUP, leader en farine de poisson premium en Côte d'Ivoire. 53% protéines brutes, origine Océan Atlantique. Idéal pour volailles, aquaculture, porcins. Livraison nationale. +225 07 79 05 71 01{% endblock %}
+
+{% block meta_keywords %}farine de poisson Abidjan, fish meal Côte d'Ivoire, nutrition animale, aliment volaille, aquaculture tilapia, provendier, protéines animales, SERVIAC GROUP, élevage poulet, alimentation porcin{% endblock %}
+
+{% block canonical %}https://serviac-group.com/{% endblock %}
+
+{% block og_title %}SERVIAC GROUP - Farine de Poisson Premium 53% Protéines{% endblock %}
+{% block og_description %}Leader en nutrition animale en Côte d'Ivoire. Farine de poisson haute qualité pour volailles, aquaculture et élevage. Livraison nationale.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "SERVIAC GROUP - Farine de Poisson Premium",
+    "description": "Leader en farine de poisson premium pour nutrition animale en Côte d'Ivoire",
+    "url": "https://serviac-group.com/",
+    "mainEntity": {
+        "@type": "Product",
+        "name": "Farine de Poisson SERVIAC",
+        "description": "Farine de poisson 53% protéines, origine Océan Atlantique"
+    }
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <!-- Hero Section Premium -->

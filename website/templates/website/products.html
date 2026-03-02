@@ -1,7 +1,48 @@
 {% extends 'base_website.html' %}
 {% load static %}
 
-{% block title %}Farine de Poisson Premium - SERVIAC GROUP{% endblock %}
+{% block title %}Farine de Poisson 53% Protéines - Prix & Caractéristiques | SERVIAC GROUP{% endblock %}
+
+{% block meta_description %}Farine de poisson SERVIAC: 53% protéines brutes, 26.5% minéraux, humidité 7%. Sacs 50kg. Origine Océan Atlantique. Prix B2B compétitifs. Commandez en ligne.{% endblock %}
+
+{% block meta_keywords %}farine de poisson prix, fish meal 53% protéines, aliment volaille Côte d'Ivoire, nutrition poisson tilapia, sac 50kg farine poisson, achat farine poisson Abidjan{% endblock %}
+
+{% block canonical %}https://serviac-group.com/produits/{% endblock %}
+
+{% block og_type %}product{% endblock %}
+{% block og_title %}Farine de Poisson Premium 53% Protéines - SERVIAC GROUP{% endblock %}
+{% block og_description %}Composition: 53% protéines, 26.5% minéraux. Sacs 50kg. Idéal volailles, aquaculture, porcins. Livraison Côte d'Ivoire.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Farine de Poisson Premium SERVIAC",
+    "image": "{% static 'website/images/product-bag.jpg' %}",
+    "description": "Farine de poisson de haute qualité, 53% protéines brutes, 26.5% matières minérales. Origine Océan Atlantique, conditionnement sacs 50kg.",
+    "brand": {
+        "@type": "Brand",
+        "name": "SERVIAC GROUP"
+    },
+    "sku": "SERVIAC-FM-50",
+    "weight": "50 KG",
+    "category": "Alimentation Animale > Farine de Poisson",
+    "offers": {
+        "@type": "Offer",
+        "url": "https://serviac-group.com/commander/",
+        "availability": "https://schema.org/InStock",
+        "priceCurrency": "XOF",
+        "itemCondition": "https://schema.org/NewCondition"
+    },
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "150"
+    }
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <!-- Hero Products -->
