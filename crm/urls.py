@@ -121,4 +121,11 @@ urlpatterns = [
     path('clients/<int:customer_pk>/commande-rapide/', views.QuickOrderCreateView.as_view(), name='quick_order'),
     path('factures/<int:invoice_pk>/encaissement-rapide/', views.QuickPaymentView.as_view(), name='quick_payment'),
     path('clients/<int:pk>/statistiques/', views.CustomerStatsView.as_view(), name='customer_stats'),
+    
+    # Phase 9: Exports
+    path('exports/clients/', views.ExportCustomersView.as_view(), name='export_customers'),
+    path('exports/commandes/', views.ExportOrdersView.as_view(), name='export_orders'),
+    path('exports/factures/', views.ExportInvoicesView.as_view(), name='export_invoices'),
+    path('exports/stock/', views.ExportStockView.as_view(), name='export_stock'),
+    path('exports/balance-agee/', views.ExportAgedBalanceView.as_view(), name='export_aged_balance'),
 ]

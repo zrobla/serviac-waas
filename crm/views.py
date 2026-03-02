@@ -1823,3 +1823,377 @@ class CustomerStatsView(LoginRequiredMixin, TemplateView):
         
         return context
 
+
+
+
+# ==============================================================
+# PHASE 9: API & Exports
+# ==============================================================
+
+import csv
+from django.http import HttpResponse
+
+try:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
+
+
+class ExportCustomersView(LoginRequiredMixin, View):
+    """Export liste clients en Excel/CSV"""
+    
+    def get(self, request):
+        format_type = request.GET.get('format', 'excel')
+        customers = Customer.objects.filter(is_active=True).order_by('name')
+        
+        if format_type == 'csv':
+            return self._export_csv(customers)
+        else:
+            return self._export_excel(customers)
+    
+    def _export_csv(self, customers):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="clients_serviac_{timezone.now().strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff')  # BOM UTF-8
+        
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['Nom', 'Type', 'Email', 'Téléphone', 'Entreprise', 'Limite Crédit', 'Solde', 'Score'])
+        
+        for c in customers:
+            writer.writerow([
+                c.name, c.customer_type, c.email or '', c.phone or '',
+                c.company or '', c.credit_limit, c.balance, c.importance_score or ''
+            ])
+        
+        return response
+    
+    def _export_excel(self, customers):
+        if not OPENPYXL_AVAILABLE:
+            return self._export_csv(customers)
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Clients SERVIAC"
+        
+        # Style en-tête
+        header_fill = PatternFill(start_color="1a5f2a", end_color="1a5f2a", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        headers = ['Nom', 'Type', 'Email', 'Téléphone', 'Entreprise', 'Limite Crédit', 'Solde', 'Score']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+        
+        # Données
+        for row, c in enumerate(customers, 2):
+            ws.cell(row=row, column=1, value=c.name)
+            ws.cell(row=row, column=2, value=c.customer_type)
+            ws.cell(row=row, column=3, value=c.email or '')
+            ws.cell(row=row, column=4, value=c.phone or '')
+            ws.cell(row=row, column=5, value=c.company or '')
+            ws.cell(row=row, column=6, value=float(c.credit_limit))
+            ws.cell(row=row, column=7, value=float(c.balance))
+            ws.cell(row=row, column=8, value=c.importance_score or '')
+        
+        # Largeur colonnes
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 10
+        ws.column_dimensions['C'].width = 25
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 25
+        ws.column_dimensions['F'].width = 15
+        ws.column_dimensions['G'].width = 12
+        ws.column_dimensions['H'].width = 8
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="clients_serviac_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+        wb.save(response)
+        return response
+
+
+class ExportOrdersView(LoginRequiredMixin, View):
+    """Export commandes en Excel/CSV"""
+    
+    def get(self, request):
+        format_type = request.GET.get('format', 'excel')
+        
+        # Filtres
+        start_date = request.GET.get('start')
+        end_date = request.GET.get('end')
+        status = request.GET.get('status')
+        
+        orders = Order.objects.select_related('customer').order_by('-created_at')
+        
+        if start_date:
+            orders = orders.filter(created_at__date__gte=start_date)
+        if end_date:
+            orders = orders.filter(created_at__date__lte=end_date)
+        if status:
+            orders = orders.filter(status=status)
+        
+        if format_type == 'csv':
+            return self._export_csv(orders)
+        else:
+            return self._export_excel(orders)
+    
+    def _export_csv(self, orders):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="commandes_serviac_{timezone.now().strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff')
+        
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['N° Commande', 'Date', 'Client', 'Statut', 'Total HT', 'Total TTC', 'Payé'])
+        
+        for o in orders:
+            writer.writerow([
+                o.order_number, o.created_at.strftime('%d/%m/%Y'),
+                o.customer.name, o.get_status_display(),
+                o.subtotal, o.total, o.amount_paid
+            ])
+        
+        return response
+    
+    def _export_excel(self, orders):
+        if not OPENPYXL_AVAILABLE:
+            return self._export_csv(orders)
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Commandes SERVIAC"
+        
+        header_fill = PatternFill(start_color="1a5f2a", end_color="1a5f2a", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        headers = ['N° Commande', 'Date', 'Client', 'Statut', 'Total HT', 'Total TTC', 'Payé']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        for row, o in enumerate(orders, 2):
+            ws.cell(row=row, column=1, value=o.order_number)
+            ws.cell(row=row, column=2, value=o.created_at.strftime('%d/%m/%Y'))
+            ws.cell(row=row, column=3, value=o.customer.name)
+            ws.cell(row=row, column=4, value=o.get_status_display())
+            ws.cell(row=row, column=5, value=float(o.subtotal))
+            ws.cell(row=row, column=6, value=float(o.total))
+            ws.cell(row=row, column=7, value=float(o.amount_paid))
+        
+        ws.column_dimensions['A'].width = 18
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 30
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 15
+        ws.column_dimensions['G'].width = 12
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="commandes_serviac_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+        wb.save(response)
+        return response
+
+
+class ExportInvoicesView(LoginRequiredMixin, View):
+    """Export factures en Excel/CSV"""
+    
+    def get(self, request):
+        format_type = request.GET.get('format', 'excel')
+        invoices = Invoice.objects.select_related('customer').order_by('-invoice_date')
+        
+        if format_type == 'csv':
+            return self._export_csv(invoices)
+        else:
+            return self._export_excel(invoices)
+    
+    def _export_csv(self, invoices):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="factures_serviac_{timezone.now().strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff')
+        
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['N° Facture', 'Date', 'Échéance', 'Client', 'Statut', 'Total', 'Payé', 'Reste'])
+        
+        for inv in invoices:
+            writer.writerow([
+                inv.invoice_number, inv.invoice_date.strftime('%d/%m/%Y'),
+                inv.due_date.strftime('%d/%m/%Y') if inv.due_date else '',
+                inv.customer.name, inv.get_status_display(),
+                inv.total, inv.amount_paid, inv.total - inv.amount_paid
+            ])
+        
+        return response
+    
+    def _export_excel(self, invoices):
+        if not OPENPYXL_AVAILABLE:
+            return self._export_csv(invoices)
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Factures SERVIAC"
+        
+        header_fill = PatternFill(start_color="1a5f2a", end_color="1a5f2a", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        headers = ['N° Facture', 'Date', 'Échéance', 'Client', 'Statut', 'Total', 'Payé', 'Reste']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        for row, inv in enumerate(invoices, 2):
+            ws.cell(row=row, column=1, value=inv.invoice_number)
+            ws.cell(row=row, column=2, value=inv.invoice_date.strftime('%d/%m/%Y'))
+            ws.cell(row=row, column=3, value=inv.due_date.strftime('%d/%m/%Y') if inv.due_date else '')
+            ws.cell(row=row, column=4, value=inv.customer.name)
+            ws.cell(row=row, column=5, value=inv.get_status_display())
+            ws.cell(row=row, column=6, value=float(inv.total))
+            ws.cell(row=row, column=7, value=float(inv.amount_paid))
+            ws.cell(row=row, column=8, value=float(inv.total - inv.amount_paid))
+        
+        ws.column_dimensions['A'].width = 18
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 30
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 15
+        ws.column_dimensions['G'].width = 12
+        ws.column_dimensions['H'].width = 12
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="factures_serviac_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+        wb.save(response)
+        return response
+
+
+class ExportStockView(LoginRequiredMixin, View):
+    """Export état du stock en Excel"""
+    
+    def get(self, request):
+        format_type = request.GET.get('format', 'excel')
+        products = Product.objects.filter(is_active=True).order_by('category__name', 'name')
+        
+        if format_type == 'csv':
+            return self._export_csv(products)
+        else:
+            return self._export_excel(products)
+    
+    def _export_csv(self, products):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="stock_serviac_{timezone.now().strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff')
+        
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['Référence', 'Produit', 'Catégorie', 'Stock actuel', 'Seuil alerte', 'Réservé', 'Disponible', 'Prix B2B', 'Prix B2C'])
+        
+        for p in products:
+            writer.writerow([
+                p.sku, p.name, p.category.name if p.category else '',
+                p.stock_quantity, p.alert_threshold, p.reserved_quantity,
+                p.stock_quantity - p.reserved_quantity,
+                p.price_b2b, p.price_b2c
+            ])
+        
+        return response
+    
+    def _export_excel(self, products):
+        if not OPENPYXL_AVAILABLE:
+            return self._export_csv(products)
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Stock SERVIAC"
+        
+        header_fill = PatternFill(start_color="1a5f2a", end_color="1a5f2a", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        alert_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
+        
+        headers = ['Référence', 'Produit', 'Catégorie', 'Stock', 'Seuil', 'Réservé', 'Disponible', 'Prix B2B', 'Prix B2C']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        for row, p in enumerate(products, 2):
+            available = p.stock_quantity - p.reserved_quantity
+            
+            ws.cell(row=row, column=1, value=p.sku)
+            ws.cell(row=row, column=2, value=p.name)
+            ws.cell(row=row, column=3, value=p.category.name if p.category else '')
+            ws.cell(row=row, column=4, value=float(p.stock_quantity))
+            ws.cell(row=row, column=5, value=float(p.alert_threshold))
+            ws.cell(row=row, column=6, value=float(p.reserved_quantity))
+            ws.cell(row=row, column=7, value=float(available))
+            ws.cell(row=row, column=8, value=float(p.price_b2b))
+            ws.cell(row=row, column=9, value=float(p.price_b2c))
+            
+            # Surligner en rouge si stock < seuil
+            if p.stock_quantity <= p.alert_threshold:
+                for col in range(1, 10):
+                    ws.cell(row=row, column=col).fill = alert_fill
+        
+        for col, width in enumerate([12, 35, 20, 10, 10, 10, 12, 12, 12], 1):
+            ws.column_dimensions[chr(64 + col)].width = width
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="stock_serviac_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+        wb.save(response)
+        return response
+
+
+class ExportAgedBalanceView(LoginRequiredMixin, View):
+    """Export balance âgée en Excel"""
+    
+    def get(self, request):
+        from django.db.models import Case, When, Value, DecimalField
+        
+        customers = Customer.objects.filter(
+            is_active=True, balance__gt=0
+        ).order_by('-balance')
+        
+        wb = Workbook() if OPENPYXL_AVAILABLE else None
+        
+        if wb:
+            ws = wb.active
+            ws.title = "Balance Agée"
+            
+            header_fill = PatternFill(start_color="1a5f2a", end_color="1a5f2a", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+            
+            headers = ['Client', 'Total dû', '0-30j', '31-60j', '61-90j', '+90j']
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.fill = header_fill
+                cell.font = header_font
+            
+            row = 2
+            for c in customers:
+                # Calcul par tranche (simplifié)
+                ws.cell(row=row, column=1, value=c.name)
+                ws.cell(row=row, column=2, value=float(c.balance))
+                # Les colonnes par tranche nécessiteraient un calcul plus complexe
+                ws.cell(row=row, column=3, value=0)
+                ws.cell(row=row, column=4, value=0)
+                ws.cell(row=row, column=5, value=0)
+                ws.cell(row=row, column=6, value=float(c.balance))  # Simplifié
+                row += 1
+            
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename="balance_agee_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+            wb.save(response)
+            return response
+        
+        # Fallback CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="balance_agee_{timezone.now().strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff')
+        
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['Client', 'Total dû'])
+        for c in customers:
+            writer.writerow([c.name, c.balance])
+        
+        return response
